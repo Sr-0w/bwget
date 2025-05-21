@@ -1,0 +1,86 @@
+.TH BWGET 1 "21 May 2025" "bwget 0.3.2" "User Commands"
+.SH NAME
+bwget \- “Better Wget” in Python
+.SH SYNOPSIS
+.B bwget
+URL [\fIoptions\fR]
+
+.SH DESCRIPTION
+bwget is a tiny, single-file Python replacement for the common parts of GNU wget. It supports HTTP/HTTPS downloads with a progress bar, automatic filename selection, resume capability, TLS verification, automatic retries, SHA-256 checksum verification, proxy support, and user configuration via a TOML file.
+
+.SH OPTIONS
+.TP
+.B \-o, \-\-output \fIFILE\fR
+Save output to \fIFILE\fR instead of the remote filename.
+.TP
+.B \-c, \-\-continue
+Resume downloading a partially downloaded file if the server supports HTTP range requests.
+.TP
+.B \-q, \-\-quiet
+Suppress non-error output (hides the progress bar).
+.TP
+.B \-\-sha256 \fIDIGEST\fR
+Expected SHA-256 checksum (64 hex digits). If not provided, bwget will attempt to fetch \fI<URL>.sha256\fR.
+.TP
+.B \-\-proxy \fIPROXY_URL\fR
+Specify an HTTP/HTTPS proxy (e.g., http://user:pass@host:port). Overrides config file.
+.TP
+.B \-\-version
+Display version information and exit.
+
+.SH CONFIGURATION
+bwget looks for a TOML config file at:
+.br
+\fI$XDG_CONFIG_HOME/bwget/config.toml\fR (default: \fI~/.config/bwget/config.toml\fR)
+.br
+A sample config is created on first run. You can set:
+.nf
+[network]
+user_agent = "bwget/0.3.2 (Python/3.x)"
+max_retries = 3
+base_backoff = 1.0
+request_timeout = 15
+stream_timeout = 30
+# proxy = "http://user:pass@proxy:8080"
+
+[download]
+chunk_size_kb = 256
+hash_chunk_size_mb = 1
+.fi
+
+.SH EXIT STATUS
+.TP
+0
+Successful completion.
+.TP
+1
+Download failed (network or HTTP error).
+.TP
+2
+SHA-256 mismatch or invalid SHA-256 provided.
+.TP
+130
+Download interrupted by user (SIGINT).
+
+.SH EXAMPLES
+.TP
+Download a file:
+.B bwget https://example.com/file.tar.gz
+
+.TP
+Resume a download:
+.B bwget -c https://example.com/large.iso
+
+.TP
+Download with SHA-256 verification:
+.B bwget --sha256 0123456789abcdef... https://example.com/app.tar.gz
+
+.TP
+Use a proxy:
+.B bwget --proxy http://proxy.local:3128 https://example.com/data.zip
+
+.SH SEE ALSO
+wget(1), curl(1)
+
+.SH AUTHOR
+Written by Robin Snyders <robin@snyders.xyz>
