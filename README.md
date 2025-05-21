@@ -2,7 +2,7 @@
 
 **Better Wget** in Python: a tiny, single-file replacement for the parts of GNU wget most people actually use.
 
-![bwget demo](https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExcTZ4YzBqYjVkOXRoaGN6eHpqenVwdGVpM28xZ256ZTQ4bHJ5bzB1ZyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/hQRkaoRTBbIuaPHhNM/giphy.gif)
+![bwget demo](https://pouch.jumpshare.com/preview/P97VWVAAv80eYgIit58iPW7Z9p5B2Gii1s3TPaJwO_8I-1Ix-3go_5QyWkuWnjxU2A4Rb8yKhJS2MLfj-2Drjw5QoTvJ8_fU7PXfI7G3wVM)
 
 ---
 
