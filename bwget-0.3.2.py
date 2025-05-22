@@ -340,7 +340,8 @@ def download(
                 http_headers["Range"] = f"bytes={downloaded_initial_size}-"
                 mode = "ab"
                 console.print(
-                    f"[cyan]Resuming [bold]{escape(final_out_path.name)}[/] from {downloaded_initial_size:,B}[/]"
+                    f"[cyan]Resuming [bold]{escape(final_out_path.name)}[/] "
+                    f"from {downloaded_initial_size:,} B[/]"
                 )
             else:
                 downloaded_initial_size = 0
@@ -484,8 +485,14 @@ def main() -> None:
     parser.add_argument("url", help="HTTP(S) URL to fetch")
     parser.add_argument("-o", "--output", metavar="FILE",
                         help="explicit output filename/path")
-    parser.add_argument("-c", "--continue", dest="resume", action="store_true",
-                        help="resume getting a partially-downloaded file")
+    # Default is now to *resume* automatically.
+    # Supplying -c / --continue will *disable* resuming and start fresh.
+    parser.add_argument(
+        "-c", "--cancel-resume",
+        dest="resume",
+        action="store_false",
+        help="do NOT resume; start downloading from scratch",
+    )
     parser.add_argument("-q", "--quiet", action="store_true",
                         help="suppress non-error output (hides progress bar)")
     parser.add_argument("--sha256", metavar="HEXDIGEST",
