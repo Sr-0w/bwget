@@ -7,7 +7,7 @@ arch=('any')
 url="https://github.com/Sr-0w/bwget"
 license=('MIT')
 depends=('python' 'python-requests' 'python-rich' 'python-tomli')
-source=("bwget-${pkgver}.py"
+source=("bwget.py"
         "bwget.1")
 sha256sums=(
   '2fbf71a99283084c8364ac1f68ebe779bf5eeff0b1f718612510af4cad56f44b'
