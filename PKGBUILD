@@ -20,7 +20,7 @@ prepare() {
 
 package() {
   # script
-  install -Dm755 "bwget-${pkgver}.py" "$pkgdir/usr/bin/bwget"
+  install -Dm755 "bwget.py" "$pkgdir/usr/bin/bwget"
 
   # manpage
   install -Dm644 bwget.1 "$pkgdir/usr/share/man/man1/bwget.1"
