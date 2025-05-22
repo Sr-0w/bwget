@@ -1,6 +1,6 @@
 pkgbase = bwget
 	pkgdesc = A tiny, single-file Python replacement for wget with progress bar, resume, retries, and sha256 verification
-	pkgver = 0.3.4-1
+	pkgver = 0.3.4-2
 	pkgrel = 1
 	url = https://github.com/Sr-0w/bwget
 	arch = any
