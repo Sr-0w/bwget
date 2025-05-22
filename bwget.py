@@ -346,10 +346,10 @@ def download(
             if original_total_size:
                 total_gb = original_total_size / (1024**3)
                 total_str = f" of {total_gb:.1f} GB"
-            console.print(
-                f"[cyan]Resuming [bold]{escape(final_out_path.name)}[/] "
-                f"from {resumed_str}{total_str}[/]"
-            )
+                console.print(
+                    f"[cyan]Resuming [bold]{escape(final_out_path.name)}[/] "
+                    f"from {resumed_str}{total_str}[/]"
+                )
             else:
                 downloaded_initial_size = 0
         if downloaded_initial_size == 0:
