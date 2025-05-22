@@ -339,13 +339,13 @@ def download(
             elif server_supports_resume or downloaded_initial_size > 0:
                 http_headers["Range"] = f"bytes={downloaded_initial_size}-"
                 mode = "ab"
-            # print human-readable resume point (MB and, if known, total in GB)
-            resumed_mb = downloaded_initial_size / (1024**2)
-            resumed_str = f"{resumed_mb:.1f} MB"
-            total_str = ""
-            if original_total_size:
-                total_gb = original_total_size / (1024**3)
-                total_str = f" of {total_gb:.1f} GB"
+                # print human-readable resume point
+                resumed_mb = downloaded_initial_size / (1024 ** 2)
+                resumed_str = f"{resumed_mb:.1f} MB"
+                total_str = ""
+                if original_total_size:
+                    total_gb = original_total_size / (1024 ** 3)
+                    total_str = f" of {total_gb:.1f} GB"
                 console.print(
                     f"[cyan]Resuming [bold]{escape(final_out_path.name)}[/] "
                     f"from {resumed_str}{total_str}[/]"
