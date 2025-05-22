@@ -1,6 +1,6 @@
 # Maintainer: Your Name <you@example.com>
 pkgname=bwget
-pkgver=0.3.2
+pkgver=0.3.3
 pkgrel=1
 pkgdesc="A tiny, single-file Python replacement for wget with progress bar, resume, retries, and sha256 verification"
 arch=('any')
