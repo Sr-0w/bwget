@@ -74,7 +74,7 @@ This will build and install `/usr/bin/bwget`, the manpage, and completions.
 # Download a file
 bwget https://example.com/file.tar.gz
 
-# Resume a download
+# Force a **fresh** download (disable resume)
 bwget -c https://example.com/large.iso
 
 # Download with SHA-256 verification
