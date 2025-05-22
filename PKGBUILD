@@ -15,7 +15,7 @@ sha256sums=(
 )
 
 prepare() {
-  sed -i 's/\r$//' "bwget-${pkgver}.py" bwget.1
+  sed -i 's/\r$//' "bwget.py" bwget.1
 }
 
 package() {
