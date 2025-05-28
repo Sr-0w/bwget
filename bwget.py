@@ -74,7 +74,7 @@ except ImportError:
 # ---------------------------------------------------------------------------
 # Version & Initial Configuration
 # ---------------------------------------------------------------------------
-VERSION = "0.3.5"  # new minor version for spinner integration
+VERSION = "0.3.4"  # new minor version for spinner integration
 
 cfg = {
     "user_agent": f"bwget/{VERSION} (Python/{sys.version_info.major}.{sys.version_info.minor})",
@@ -130,7 +130,7 @@ hash_chunk_size_mb = {cfg['hash_chunk_size'] // (1024 * 1024)}
 
 
 def load_and_apply_config():
-    cfg
+    global cfg
     config_path = get_config_file_path()
     loaded_toml_config = {}
 
@@ -253,14 +253,7 @@ def _open_stream(url: str, stream_headers: dict[str, str]) -> requests.Response:
 
 
 def verify_sha256_with_progress(file_path: Path, expected_digest: str):
-    EARLY_PB
-    if EARLY_PB is not None:            # close placeholder bar, if still running
-        try:
-            EARLY_PB.stop()
-        finally:
-            EARLY_PB = None
-
-    console.print(f"[cyan]Verifying SHA-256 for [bold]{escape(file_path.name)}[/]...[/]")
+    console.print(f"[cyan]Verifying SHA‑256 for [bold]{escape(file_path.name)}[/]...[/]")
     sha, file_size = hashlib.sha256(), file_path.stat().st_size
     with file_path.open("rb") as f, Progress(
         TextColumn("[deep_sky_blue1]{task.description}[/] {task.percentage:>6.2f}%"),
@@ -305,7 +298,7 @@ def download(
     final_out_path, http_headers = initial_out_path, {"User-Agent": cfg["user_agent"]}
 
     # If the early placeholder bar is running, update its label
-    EARLY_PB
+    global EARLY_PB
     if EARLY_PB is not None:
         for task in EARLY_PB.tasks:
             EARLY_PB.update(task.id, description="Connecting…")
@@ -478,10 +471,8 @@ def download(
 
     except Exception as e:
         console.print(f"[bold red]Unexpected error: {type(e).__name__}: {e}[/]")
-        EARLY_PB
-        if EARLY_PB:
-            EARLY_PB.stop()
-            EARLY_PB = None
+        if placeholder_pb:
+            placeholder_pb.stop()
         sys.exit(3)
 
 
@@ -525,7 +516,7 @@ def main() -> None:
         sys.exit(1)
     ns = parser.parse_args()
 
-    EARLY_PB
+    global EARLY_PB
     if ns.quiet:
         if EARLY_PB:
             EARLY_PB.stop()
