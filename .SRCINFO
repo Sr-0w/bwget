@@ -11,7 +11,7 @@ pkgbase = bwget
 	depends = python-tomli
 	source = bwget.py
 	source = bwget.1
-	sha256sums = 26c193ce9acee8e2f5104d9cd65c1f59ace772a4b006dc5ae80d4c250148762b
+	sha256sums = ba1f65bde5f670c15abd5e20559e062fa574e2e8a59aca791914bb33aa16fa20
 	sha256sums = 78370b058f94a75249707d959d170e1aa55d8ef6b0e0129fa0db9ef746c60743
 
 pkgname = bwget
