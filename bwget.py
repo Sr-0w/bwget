@@ -253,7 +253,14 @@ def _open_stream(url: str, stream_headers: dict[str, str]) -> requests.Response:
 
 
 def verify_sha256_with_progress(file_path: Path, expected_digest: str):
-    console.print(f"[cyan]Verifying SHA‑256 for [bold]{escape(file_path.name)}[/]...[/]")
+    global EARLY_PB
+    if EARLY_PB is not None:            # close placeholder bar, if still running
+        try:
+            EARLY_PB.stop()
+        finally:
+            EARLY_PB = None
+
+    console.print(f"[cyan]Verifying SHA-256 for [bold]{escape(file_path.name)}[/]...[/]")
     sha, file_size = hashlib.sha256(), file_path.stat().st_size
     with file_path.open("rb") as f, Progress(
         TextColumn("[deep_sky_blue1]{task.description}[/] {task.percentage:>6.2f}%"),
@@ -471,8 +478,10 @@ def download(
 
     except Exception as e:
         console.print(f"[bold red]Unexpected error: {type(e).__name__}: {e}[/]")
-        if placeholder_pb:
-            placeholder_pb.stop()
+        global EARLY_PB
+        if EARLY_PB:
+            EARLY_PB.stop()
+            EARLY_PB = None
         sys.exit(3)
 
 
