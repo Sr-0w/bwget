@@ -10,7 +10,7 @@ depends=('python' 'python-requests' 'python-rich' 'python-tomli')
 source=("bwget.py"
         "bwget.1")
 sha256sums=(
-  'a37a99c98ec3e2d984ad257c137698dd029c64900a0e7b4cf186af0cfb8e5bb2'
+  '26c193ce9acee8e2f5104d9cd65c1f59ace772a4b006dc5ae80d4c250148762b'
   '78370b058f94a75249707d959d170e1aa55d8ef6b0e0129fa0db9ef746c60743'
 )
 
