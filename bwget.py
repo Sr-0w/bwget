@@ -305,7 +305,7 @@ def download(
     final_out_path, http_headers = initial_out_path, {"User-Agent": cfg["user_agent"]}
 
     # If the early placeholder bar is running, update its label
-    global EARLY_PB
+    EARLY_PB
     if EARLY_PB is not None:
         for task in EARLY_PB.tasks:
             EARLY_PB.update(task.id, description="Connecting…")
@@ -478,7 +478,7 @@ def download(
 
     except Exception as e:
         console.print(f"[bold red]Unexpected error: {type(e).__name__}: {e}[/]")
-        global EARLY_PB
+        EARLY_PB
         if EARLY_PB:
             EARLY_PB.stop()
             EARLY_PB = None
@@ -525,7 +525,7 @@ def main() -> None:
         sys.exit(1)
     ns = parser.parse_args()
 
-    global EARLY_PB
+    EARLY_PB
     if ns.quiet:
         if EARLY_PB:
             EARLY_PB.stop()
