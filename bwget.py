@@ -130,7 +130,7 @@ hash_chunk_size_mb = {cfg['hash_chunk_size'] // (1024 * 1024)}
 
 
 def load_and_apply_config():
-     cfg
+    cfg
     config_path = get_config_file_path()
     loaded_toml_config = {}
 
