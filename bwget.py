@@ -130,7 +130,7 @@ hash_chunk_size_mb = {cfg['hash_chunk_size'] // (1024 * 1024)}
 
 
 def load_and_apply_config():
-    global cfg
+     cfg
     config_path = get_config_file_path()
     loaded_toml_config = {}
 
@@ -253,7 +253,7 @@ def _open_stream(url: str, stream_headers: dict[str, str]) -> requests.Response:
 
 
 def verify_sha256_with_progress(file_path: Path, expected_digest: str):
-    global EARLY_PB
+    EARLY_PB
     if EARLY_PB is not None:            # close placeholder bar, if still running
         try:
             EARLY_PB.stop()
