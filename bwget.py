@@ -74,7 +74,7 @@ except ImportError:
 # ---------------------------------------------------------------------------
 # Version & Initial Configuration
 # ---------------------------------------------------------------------------
-VERSION = "0.3.4"  # new minor version for spinner integration
+VERSION = "0.3.6"  # new minor version for spinner integration
 
 cfg = {
     "user_agent": f"bwget/{VERSION} (Python/{sys.version_info.major}.{sys.version_info.minor})",
