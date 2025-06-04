@@ -6,8 +6,8 @@ bwget -- “Better Wget” in Python
 A tiny, single‑file replacement for the parts of GNU wget most people
 actually use: downloading one HTTP/HTTPS resource (or a single torrent)
 with a pretty progress bar, automatic filename selection, optional resume,
-TLS verification, automatic retries, optional SHA‑256 verification, and
-proxy support via CLI, config file, or environment variables.
+TLS verification, automatic retries, optional SHA‑256 verification, proxy
+support, and optional authentication via the CLI.
 """
 
 from __future__ import annotations
@@ -190,7 +190,7 @@ def pick_initial_filename(url: str, explicit_path_str: str | None) -> Path:
     return Path(Path(urlsplit(url).path.rstrip("/")).name or "index.html")
 
 
-def request_head(url: str, headers: dict) -> requests.Response | None:
+def request_head(url: str, headers: dict, *, auth=None) -> requests.Response | None:
     try:
         return requests.head(
             url,
@@ -198,13 +198,14 @@ def request_head(url: str, headers: dict) -> requests.Response | None:
             timeout=cfg["request_timeout"],
             headers=headers,
             proxies=cfg["final_proxies_dict"],
+            auth=auth,
         )
     except RequestException as e:
         console.print(f"[yellow]ⓘ HEAD request failed for {shorten(url, 70)}: {e}[/]", highlight=True)
         return None
 
 
-def fetch_remote_sha256(url: str, headers: dict) -> str | None:
+def fetch_remote_sha256(url: str, headers: dict, *, auth=None) -> str | None:
     sha_url = url + ".sha256"
     try:
         r = requests.get(
@@ -212,6 +213,7 @@ def fetch_remote_sha256(url: str, headers: dict) -> str | None:
             timeout=cfg["request_timeout"],
             headers=headers,
             proxies=cfg["final_proxies_dict"],
+            auth=auth,
         )
         r.raise_for_status()
         first_line = r.text.strip().splitlines()[0]
@@ -225,7 +227,7 @@ def fetch_remote_sha256(url: str, headers: dict) -> str | None:
     return None
 
 
-def _open_stream(url: str, stream_headers: dict[str, str]) -> requests.Response:
+def _open_stream(url: str, stream_headers: dict[str, str], *, auth=None) -> requests.Response:
     """Open the HTTP stream with a spinner shown until the first byte arrives."""
 
     attempt, backoff, max_r = 0, cfg["base_backoff"], cfg["max_retries"]
@@ -241,6 +243,7 @@ def _open_stream(url: str, stream_headers: dict[str, str]) -> requests.Response:
                 headers=stream_headers,
                 timeout=cfg["stream_timeout"],
                 proxies=cfg["final_proxies_dict"],
+                auth=auth,
             )
             r.raise_for_status()
             return r
@@ -307,7 +310,7 @@ def is_torrent(url: str) -> bool:
     return url.startswith("magnet:") or url.lower().endswith(".torrent")
 
 
-def download_torrent(url: str, out_dir: Path, expected_sha256: str | None = None) -> None:
+def download_torrent(url: str, out_dir: Path, expected_sha256: str | None = None, *, auth=None, auth_hdr: dict | None = None) -> None:
     """Download a single torrent or magnet link without seeding.
 
     If ``expected_sha256`` is provided and the torrent contains exactly one
@@ -356,11 +359,15 @@ def download_torrent(url: str, out_dir: Path, expected_sha256: str | None = None
                 params = {"save_path": str(out_dir), "url": url}
             handle = ses.add_torrent(params)
     else:
+        hdrs = {"User-Agent": cfg["user_agent"]}
+        if auth_hdr:
+            hdrs.update(auth_hdr)
         r = requests.get(
             url,
             timeout=cfg["request_timeout"],
-            headers={"User-Agent": cfg["user_agent"]},
+            headers=hdrs,
             proxies=cfg["final_proxies_dict"],
+            auth=auth,
         )
         r.raise_for_status()
         with tempfile.NamedTemporaryFile(delete=False) as tf:
@@ -448,9 +455,14 @@ def download(
     explicit_output_given: bool,
     resume: bool,
     expected_sha256: str | None,
+    *,
+    auth=None,
+    auth_hdr: dict | None = None,
 ) -> None:
 
     final_out_path, http_headers = initial_out_path, {"User-Agent": cfg["user_agent"]}
+    if auth_hdr:
+        http_headers.update(auth_hdr)
 
     # If the early placeholder bar is running, update its label
     global EARLY_PB
@@ -464,7 +476,7 @@ def download(
         False,
     )
 
-    head_resp = request_head(url, headers=http_headers)
+    head_resp = request_head(url, headers=http_headers, auth=auth)
     if head_resp:
         original_total_size = int(head_resp.headers.get("Content-Length", 0))
         server_supports_resume = "bytes" in head_resp.headers.get("Accept-Ranges", "").lower()
@@ -511,7 +523,7 @@ def download(
             mode = "wb"
 
     try:
-        with _open_stream(url, stream_headers=http_headers) as r:
+        with _open_stream(url, stream_headers=http_headers, auth=auth) as r:
 
             # Stop the early placeholder bar — real progress starts now
             if EARLY_PB:
@@ -664,6 +676,8 @@ def main() -> None:
     parser.add_argument("--proxy", metavar="PROXY_URL",
                         help="HTTP/HTTPS proxy URL "
                              "(e.g., http://user:pass@host:port)")
+    parser.add_argument("--auth", metavar="CRED",
+                        help="HTTP basic user:pass or bearer token")
     parser.add_argument("--version", action="version",
                         version=f"%(prog)s {VERSION}")
 
@@ -699,9 +713,22 @@ def main() -> None:
     else:
         cfg["final_proxies_dict"] = None
 
+    auth_tuple = None
+    auth_header = {}
+    if ns.auth:
+        if ':' in ns.auth:
+            user, pw = ns.auth.split(':', 1)
+            auth_tuple = (user, pw)
+        else:
+            auth_header = {"Authorization": f"Bearer {ns.auth}"}
+
     req_hdrs     = {"User-Agent": cfg["user_agent"]}
-    expected_sha = (ns.sha256.lower()
-                    if ns.sha256 else fetch_remote_sha256(ns.url, req_hdrs))
+    if auth_header:
+        req_hdrs.update(auth_header)
+    expected_sha = (
+        ns.sha256.lower()
+        if ns.sha256 else fetch_remote_sha256(ns.url, req_hdrs, auth=auth_tuple)
+    )
 
     if ns.sha256 and (not expected_sha or len(expected_sha) != 64
                       or not all(c in "0123456789abcdefABCDEF" for c in expected_sha)):
@@ -714,7 +741,8 @@ def main() -> None:
 
     if is_torrent(ns.url):
         out_dir = Path(ns.output).expanduser() if ns.output else Path('.')
-        download_torrent(ns.url, out_dir, expected_sha)
+        download_torrent(ns.url, out_dir, expected_sha,
+                        auth=auth_tuple, auth_hdr=auth_header)
     else:
         initial_path = pick_initial_filename(ns.url, ns.output)
         download(
@@ -723,6 +751,8 @@ def main() -> None:
             ns.output is not None,
             ns.resume,
             expected_sha,
+            auth=auth_tuple,
+            auth_hdr=auth_header,
         )
 
 

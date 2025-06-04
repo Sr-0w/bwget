@@ -13,6 +13,7 @@
 * Automatic filename selection (from URL or **Content-Disposition** header)
 * Resume support for partially downloaded files (HTTP range requests)
 * TLS verification and proxy support (CLI, config file, or environment variables)
+* Optional HTTP authentication via `--auth`
 * Automatic retries with exponential backoff
 * Optional SHA‑256 checksum verification (auto-fetch `<URL>.sha256`)
 * Configuration via TOML (`~/.config/bwget/config.toml`)
@@ -88,6 +89,12 @@ bwget --sha256 0123456789abcdef... https://example.com/app.tar.gz
 
 # Use an HTTP proxy
 bwget --proxy http://proxy.local:3128 https://example.com/data.zip
+
+# Authenticate with Basic credentials
+bwget --auth user:pass https://example.com/secure/file
+
+# Authenticate with a Bearer token
+bwget --auth ABCDEFGH12345678 https://api.example.com/data
 
 # Show version
 bwget --version
