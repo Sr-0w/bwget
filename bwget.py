@@ -393,12 +393,11 @@ def download_torrent(url: str, out_dir: Path, expected_sha256: str | None = None
             time.sleep(1)
     progress.update(task_id, completed=100)
 
-    ses.remove_torrent(handle)
     console.print("[green]✔ Torrent download complete[/]")
 
     if expected_sha256:
         try:
-            info = handle.get_torrent_info() if hasattr(handle, "get_torrent_info") else handle.torrent_file()
+            info = handle.torrent_file() if hasattr(handle, "torrent_file") else handle.get_torrent_info()
             files = info.files()
             num_files = files.num_files() if hasattr(files, "num_files") else files.num_files
             if num_files == 1:
@@ -414,6 +413,8 @@ def download_torrent(url: str, out_dir: Path, expected_sha256: str | None = None
                 console.print("[yellow]⚠ Cannot verify SHA-256 for multi-file torrent.[/]")
         except Exception as e:
             console.print(f"[yellow]⚠ SHA-256 verification skipped: {e}[/]")
+
+    ses.remove_torrent(handle)
 
 
 def download(
