@@ -386,7 +386,7 @@ def download_torrent(url: str, out_dir: Path, expected_sha256: str | None = None
         DownloadColumn(True),
         TransferSpeedColumn(),
         TimeRemainingColumn(),
-        TextColumn(lambda t: f"{t.fields.get('seeds', 0)} seeds - {t.fields.get('peers', 0)} peers"),
+        TextColumn("{task.fields[seeds]} seeds - {task.fields[peers]} peers"),
     ]
 
     with Progress(*cols, console=console, transient=True) as progress:
