@@ -337,7 +337,11 @@ def download_torrent(url: str, out_dir: Path) -> None:
 
     if url.startswith("magnet:"):
         if use_modern_api and hasattr(lt, "add_magnet_uri"):
-            handle = lt.add_magnet_uri(ses, url, params)
+            try:
+                handle = lt.add_magnet_uri(ses, url, params)
+            except Exception:
+                params = {"save_path": str(out_dir), "url": url}
+                handle = ses.add_torrent(params)
         else:
             if use_modern_api:
                 params.url = url
