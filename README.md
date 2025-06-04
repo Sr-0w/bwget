@@ -196,5 +196,3 @@ Crafted with care by **Robin Snyders** ([robin@snyders.xyz](mailto:robin@snyders
 ## 📝 License
 
 This project is licensed under the [MIT License](LICENSE).
----
-Enjoy using **bwget**—making downloading simpler, faster, and better!
