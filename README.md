@@ -54,7 +54,16 @@ sudo install -Dm644 bwget.1 /usr/share/man/man1/bwget.1
 ### 📦 Packages
 
 * **Arch Linux (AUR)**: [bwget](https://aur.archlinux.org/packages/bwget)
+```bash
+yay -S bwget
+or
+pary -S bwget
+```
 * **Fedora (COPR)**: [bwget](https://copr.fedorainfracloud.org/coprs/srobin/bwget/)
+```bash
+dnf copr enable srobin/bwget
+dnf install bwget
+```
 
 Install from AUR manually:
 
