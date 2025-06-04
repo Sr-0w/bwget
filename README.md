@@ -15,6 +15,7 @@
 * TLS verification and proxy support (CLI, config file, or environment variables)
 * Automatic retries with exponential backoff
 * Optional SHA‑256 checksum verification (auto-fetch `<URL>.sha256`)
+* Batch downloads from a file (`-i urls.txt`)
 * Configuration via TOML (`~/.config/bwget/config.toml`)
 
 ## Requirements
@@ -88,6 +89,9 @@ bwget --sha256 0123456789abcdef... https://example.com/app.tar.gz
 
 # Use an HTTP proxy
 bwget --proxy http://proxy.local:3128 https://example.com/data.zip
+
+# Download many URLs from a file
+bwget -i urls.txt
 
 # Custom User-Agent
 bwget -U "MyDownloader/1.0" https://example.com/file.zip
