@@ -10,7 +10,8 @@ bwget \- “Better Wget” in Python
 of GNU wget.  
 It supports HTTP/HTTPS downloads with a nice progress bar, .torrent and magnet
 link handling (single torrent at a time, no seeding), automatic filename
-selection, automatic \fIresume\fR (now the default), TLS verification,
+selection, automatic \fIresume\fR (now the default), TLS verification
+(can be disabled with \fB--no-check-certificate\fR, insecure),
 automatic retries with exponential back-off, optional SHA-256 verification,
 proxy support, and user configuration via a TOML file.
 
@@ -44,6 +45,9 @@ Use the specified HTTP/HTTPS proxy
 (e.g.\  \fIhttp://user:pass@host:port\fR).
 Overrides any proxy defined in the config file or environment.
 .TP
+.B \-\-no-check-certificate
+Skip TLS certificate verification (\fIDANGEROUS\fR; vulnerable to MITM).
+.TP
 .B \-\-version
 Display version information and exit.
 
@@ -60,6 +64,8 @@ max_retries      = 3
 base_backoff     = 1.0
 request_timeout  = 15
 stream_timeout   = 30
+# verify TLS certificates (set to false to disable verification)
+verify_tls      = true
 # proxy          = "http://user:pass@proxy:8080"
 
 [download]

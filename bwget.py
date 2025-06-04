@@ -94,6 +94,7 @@ cfg = {
     "request_timeout": 15, "stream_timeout": 30,
     "chunk_size": 1 << 18, "hash_chunk_size": 1 << 20,
     "proxy_url_config": None, "final_proxies_dict": None,
+    "verify_tls": True,
 }
 
 TRANSIENT_STATUS = {500, 502, 503, 504}
@@ -126,6 +127,7 @@ max_retries = {cfg['max_retries']}
 base_backoff = {cfg['base_backoff']:.1f}
 request_timeout = {cfg['request_timeout']}
 stream_timeout = {cfg['stream_timeout']}
+verify_tls = true
 
 [download]
 chunk_size_kb = {cfg['chunk_size'] // 1024}
@@ -169,6 +171,7 @@ def load_and_apply_config():
         "request_timeout": int(net_conf.get("request_timeout", cfg["request_timeout"])),
         "stream_timeout": int(net_conf.get("stream_timeout", cfg["stream_timeout"])),
         "proxy_url_config": net_conf.get("proxy"),
+        "verify_tls": bool(net_conf.get("verify_tls", cfg["verify_tls"])),
         "chunk_size": int(dl_conf.get("chunk_size_kb", cfg["chunk_size"] // 1024)) * 1024,
         "hash_chunk_size": int(dl_conf.get("hash_chunk_size_mb", cfg["hash_chunk_size"] // (1024*1024))) * 1024 * 1024,
     })
@@ -198,6 +201,7 @@ def request_head(url: str, headers: dict) -> requests.Response | None:
             timeout=cfg["request_timeout"],
             headers=headers,
             proxies=cfg["final_proxies_dict"],
+            verify=cfg["verify_tls"],
         )
     except RequestException as e:
         console.print(f"[yellow]ⓘ HEAD request failed for {shorten(url, 70)}: {e}[/]", highlight=True)
@@ -212,6 +216,7 @@ def fetch_remote_sha256(url: str, headers: dict) -> str | None:
             timeout=cfg["request_timeout"],
             headers=headers,
             proxies=cfg["final_proxies_dict"],
+            verify=cfg["verify_tls"],
         )
         r.raise_for_status()
         first_line = r.text.strip().splitlines()[0]
@@ -241,6 +246,7 @@ def _open_stream(url: str, stream_headers: dict[str, str]) -> requests.Response:
                 headers=stream_headers,
                 timeout=cfg["stream_timeout"],
                 proxies=cfg["final_proxies_dict"],
+                verify=cfg["verify_tls"],
             )
             r.raise_for_status()
             return r
@@ -361,6 +367,7 @@ def download_torrent(url: str, out_dir: Path, expected_sha256: str | None = None
             timeout=cfg["request_timeout"],
             headers={"User-Agent": cfg["user_agent"]},
             proxies=cfg["final_proxies_dict"],
+            verify=cfg["verify_tls"],
         )
         r.raise_for_status()
         with tempfile.NamedTemporaryFile(delete=False) as tf:
@@ -665,6 +672,31 @@ def main() -> None:
     parser.add_argument("--sha256", metavar="HEXDIGEST",
                         help="expected SHA-256 (64 hex chars). "
                              "Auto-fetches <URL>.sha256 if not given.")
+
+    parser.add_argument("--proxy", metavar="PROXY_URL",
+                        help="HTTP/HTTPS proxy URL "
+                             "(e.g., http://user:pass@host:port)")
+    parser.add_argument(
+        "--no-check-certificate",
+        action="store_true",
+        help="disable TLS certificate verification (INSECURE)",
+    )
+    parser.add_argument("--version", action="version",
+                        version=f"%(prog)s {VERSION}")
+
+    if len(sys.argv) == 1:
+        parser.print_help(sys.stderr)
+        sys.exit(1)
+    ns = parser.parse_args()
+    cfg["verify_tls"] = not ns.no_check_certificate
+
+    global EARLY_PB
+    if ns.quiet:
+        if EARLY_PB:
+            EARLY_PB.stop()
+            EARLY_PB = None
+        console.quiet = True
+
     parser.add_argument("-U", "--user-agent", metavar="UA",
                         help="override User-Agent header")
     parser.add_argument("--proxy", metavar="PROXY_URL",
@@ -687,6 +719,7 @@ def main() -> None:
 
     if ns.user_agent:
         cfg["user_agent"] = ns.user_agent
+
 
     proxy_url_str_to_use = ns.proxy or cfg["proxy_url_config"]
     if proxy_url_str_to_use:

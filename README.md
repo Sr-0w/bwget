@@ -12,7 +12,7 @@
 * .torrent and magnet link support (single torrent at a time, no seeding)
 * Automatic filename selection (from URL or **Content-Disposition** header)
 * Resume support for partially downloaded files (HTTP range requests)
-* TLS verification and proxy support (CLI, config file, or environment variables)
+* TLS verification (can be disabled with `--no-check-certificate`, insecure!) and proxy support (CLI, config file, or environment variables)
 * Automatic retries with exponential backoff
 * Optional SHA‑256 checksum verification (auto-fetch `<URL>.sha256`)
 * Batch downloads from a file (`-i urls.txt`)
@@ -90,6 +90,10 @@ bwget --sha256 0123456789abcdef... https://example.com/app.tar.gz
 # Use an HTTP proxy
 bwget --proxy http://proxy.local:3128 https://example.com/data.zip
 
+# Disable TLS verification (insecure)
+bwget --no-check-certificate https://example.com/file.tar.gz
+# This makes the connection vulnerable to man-in-the-middle attacks.
+
 # Download many URLs from a file
 bwget -i urls.txt
 
@@ -122,6 +126,7 @@ max_retries = 3
 base_backoff = 1.0
 request_timeout = 15
 stream_timeout = 30
+verify_tls = true
 
 [download]
 chunk_size_kb = 256
