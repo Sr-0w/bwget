@@ -157,9 +157,15 @@ def load_and_apply_config():
     if config_path.exists():
         try:
             with open(config_path, "rb") as f:
-                loaded_toml_config = tomllib.load(f) if tomllib_present else toml.load(open(config_path, "r", encoding="utf-8"))
+                if tomllib_present:
+                    loaded_toml_config = tomllib.load(f)
+                else:
+                    loaded_toml_config = toml.load(f)
         except Exception as e:
-            console.print(f"[warning]Could not load/parse config {escape(str(config_path))}: {e}[/warning]", style="yellow")
+            console.print(
+                f"[warning]Could not load/parse config {escape(str(config_path))}: {e}[/warning]",
+                style="yellow",
+            )
     elif tomllib_present or toml_present:
         create_sample_config(config_path)
 
@@ -643,7 +649,7 @@ def download(
 # CLI entry-point
 # ---------------------------------------------------------------------------
 def main() -> None:
-    global cfg
+    global cfg, EARLY_PB
 
     load_and_apply_config()
 
@@ -676,6 +682,8 @@ def main() -> None:
     parser.add_argument("--proxy", metavar="PROXY_URL",
                         help="HTTP/HTTPS proxy URL "
                              "(e.g., http://user:pass@host:port)")
+    parser.add_argument("-U", "--user-agent", metavar="UA",
+                        help="override User-Agent header")
     parser.add_argument(
         "--no-check-certificate",
         action="store_true",
@@ -690,27 +698,6 @@ def main() -> None:
     ns = parser.parse_args()
     cfg["verify_tls"] = not ns.no_check_certificate
 
-    global EARLY_PB
-    if ns.quiet:
-        if EARLY_PB:
-            EARLY_PB.stop()
-            EARLY_PB = None
-        console.quiet = True
-
-    parser.add_argument("-U", "--user-agent", metavar="UA",
-                        help="override User-Agent header")
-    parser.add_argument("--proxy", metavar="PROXY_URL",
-                        help="HTTP/HTTPS proxy URL "
-                             "(e.g., http://user:pass@host:port)")
-    parser.add_argument("--version", action="version",
-                        version=f"%(prog)s {VERSION}")
-
-    if len(sys.argv) == 1:
-        parser.print_help(sys.stderr)
-        sys.exit(1)
-    ns = parser.parse_args()
-
-    global EARLY_PB
     if ns.quiet:
         if EARLY_PB:
             EARLY_PB.stop()
