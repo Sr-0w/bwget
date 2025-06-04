@@ -21,13 +21,20 @@
 ## 🛠️ Requirements
 
 * **Python 3.8+**
-* `requests`, `rich`, and `libtorrent` packages
+* `requests` and `rich` packages
+* `libtorrent` (optional, required for torrent and magnet downloads)
 * `tomli` (Python <3.11) or built-in `tomllib` (Python ≥3.11)
 
-Install all dependencies quickly:
+Install the core dependencies:
 
 ```bash
-pip install requests rich libtorrent tomli
+pip install requests rich tomli
+```
+
+To enable torrent support you will also need `libtorrent`:
+
+```bash
+pip install libtorrent
 ```
 
 ---
@@ -132,6 +139,20 @@ Check version:
 bwget --version
 ```
 
+## 🗒️ Command-Line Options
+
+| Option | Description |
+| ------ | ----------- |
+| `-o`, `--output FILE` | Save the download to `FILE` instead of the remote filename |
+| `-c`, `--cancel-resume` | Disable resume and start the download from scratch |
+| `-q`, `--quiet` | Suppress non-error output |
+| `-i`, `--input FILE` | Read URLs from `FILE` (one per line) |
+| `--sha256 DIGEST` | Verify download against the given SHA-256 digest |
+| `--proxy PROXY_URL` | Use the specified HTTP/HTTPS proxy |
+| `-U`, `--user-agent UA` | Override the User-Agent header |
+| `--no-check-certificate` | Disable TLS certificate verification (insecure) |
+| `--version` | Display version information and exit |
+
 ---
 
 ## 🔧 Configuration
@@ -172,4 +193,8 @@ Crafted with care by **Robin Snyders** ([robin@snyders.xyz](mailto:robin@snyders
 
 ---
 
+## 📝 License
+
+This project is licensed under the [MIT License](LICENSE).
+---
 Enjoy using **bwget**—making downloading simpler, faster, and better!
