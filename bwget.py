@@ -326,9 +326,6 @@ def download_torrent(url: str, out_dir: Path) -> None:
         pack = lt.settings_pack()
         pack.listen_interfaces = "0.0.0.0:6881-6891"
         ses.apply_settings(pack)
-    else:
-        if hasattr(ses, "listen_on"):
-            ses.listen_on(6881, 6891)
 
     use_modern_api = hasattr(lt, "add_torrent_params")
     params = lt.add_torrent_params() if use_modern_api else {"save_path": str(out_dir)}
@@ -340,13 +337,19 @@ def download_torrent(url: str, out_dir: Path) -> None:
             try:
                 handle = lt.add_magnet_uri(ses, url, params)
             except Exception:
-                params = {"save_path": str(out_dir), "url": url}
-                handle = ses.add_torrent(params)
+                if hasattr(lt, "parse_magnet_uri"):
+                    params = lt.parse_magnet_uri(url)
+                    params.save_path = str(out_dir)
+                    handle = ses.add_torrent(params)
+                else:
+                    params = {"save_path": str(out_dir), "url": url}
+                    handle = ses.add_torrent(params)
         else:
-            if use_modern_api:
-                params.url = url
+            if use_modern_api and hasattr(lt, "parse_magnet_uri"):
+                params = lt.parse_magnet_uri(url)
+                params.save_path = str(out_dir)
             else:
-                params["url"] = url
+                params = {"save_path": str(out_dir), "url": url}
             handle = ses.add_torrent(params)
     else:
         r = requests.get(
