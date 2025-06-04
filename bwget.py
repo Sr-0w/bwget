@@ -386,14 +386,14 @@ def download_torrent(url: str, out_dir: Path, expected_sha256: str | None = None
         DownloadColumn(True),
         TransferSpeedColumn(),
         TimeRemainingColumn(),
+        TextColumn(lambda t: f"{t.fields.get('seeds', 0)} seeds - {t.fields.get('peers', 0)} peers"),
     ]
 
     with Progress(*cols, console=console, transient=True) as progress:
-        task_id = progress.add_task(torrent_name, total=100.0)
+        task_id = progress.add_task("Progress", total=100.0, seeds=status.num_seeds, peers=status.num_peers)
         while not handle.status().is_seeding:
             s = handle.status()
-            desc = f"{torrent_name} ({s.num_seeds} seeds, {s.num_peers} peers)"
-            progress.update(task_id, completed=s.progress * 100, description=desc)
+            progress.update(task_id, completed=s.progress * 100, seeds=s.num_seeds, peers=s.num_peers)
             time.sleep(0.5)
         progress.update(task_id, completed=100)
 
