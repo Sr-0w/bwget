@@ -95,6 +95,8 @@ cfg = {
     "chunk_size": 1 << 18, "hash_chunk_size": 1 << 20,
     "proxy_url_config": None, "final_proxies_dict": None,
     "verify_tls": True,
+    "resume_default": True,
+    "torrent_listen_interfaces": "0.0.0.0:6881-6891",
 }
 
 TRANSIENT_STATUS = {500, 502, 503, 504}
@@ -126,12 +128,16 @@ user_agent = "{cfg['user_agent']}"
 max_retries = {cfg['max_retries']}
 base_backoff = {cfg['base_backoff']:.1f}
 request_timeout = {cfg['request_timeout']}
-stream_timeout = {cfg['stream_timeout']}
-verify_tls = true
+    stream_timeout = {cfg['stream_timeout']}
+    verify_tls = true
 
 [download]
-chunk_size_kb = {cfg['chunk_size'] // 1024}
-hash_chunk_size_mb = {cfg['hash_chunk_size'] // (1024 * 1024)}
+    chunk_size_kb = {cfg['chunk_size'] // 1024}
+    hash_chunk_size_mb = {cfg['hash_chunk_size'] // (1024 * 1024)}
+    resume_default = true
+
+[torrent]
+    listen_interfaces = "{cfg['torrent_listen_interfaces']}"
 """
     try:
         config_path.parent.mkdir(parents=True, exist_ok=True)
@@ -169,7 +175,9 @@ def load_and_apply_config():
     elif tomllib_present or toml_present:
         create_sample_config(config_path)
 
-    net_conf, dl_conf = loaded_toml_config.get("network", {}), loaded_toml_config.get("download", {})
+    net_conf = loaded_toml_config.get("network", {})
+    dl_conf = loaded_toml_config.get("download", {})
+    torrent_conf = loaded_toml_config.get("torrent", {})
     cfg.update({
         "user_agent": net_conf.get("user_agent", cfg["user_agent"]),
         "max_retries": int(net_conf.get("max_retries", cfg["max_retries"])),
@@ -180,6 +188,8 @@ def load_and_apply_config():
         "verify_tls": bool(net_conf.get("verify_tls", cfg["verify_tls"])),
         "chunk_size": int(dl_conf.get("chunk_size_kb", cfg["chunk_size"] // 1024)) * 1024,
         "hash_chunk_size": int(dl_conf.get("hash_chunk_size_mb", cfg["hash_chunk_size"] // (1024*1024))) * 1024 * 1024,
+        "resume_default": bool(dl_conf.get("resume_default", cfg["resume_default"])),
+        "torrent_listen_interfaces": torrent_conf.get("listen_interfaces", cfg["torrent_listen_interfaces"]),
     })
 
 # ---------------------------------------------------------------------------
@@ -350,7 +360,7 @@ def download_torrent(url: str, out_dir: Path, expected_sha256: str | None = None
     ses = lt.session()
     if hasattr(lt, "settings_pack"):
         pack = lt.settings_pack()
-        pack.listen_interfaces = "0.0.0.0:6881-6891"
+        pack.listen_interfaces = cfg["torrent_listen_interfaces"]
         ses.apply_settings(pack)
 
     use_modern_api = hasattr(lt, "add_torrent_params")
@@ -682,6 +692,7 @@ def main() -> None:
         "-c", "--cancel-resume",
         dest="resume",
         action="store_false",
+        default=cfg["resume_default"],
         help="do NOT resume; start downloading from scratch",
     )
     parser.add_argument("-q", "--quiet", action="store_true",

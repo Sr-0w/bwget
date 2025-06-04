@@ -163,7 +163,8 @@ On first launch, bwget creates a default configuration at:
 ~/.config/bwget/config.toml
 ```
 
-Customize settings like proxies, retries, timeouts, and chunk sizes directly:
+Customize settings like proxies, retries, timeouts, chunk sizes, default resume
+behavior and torrent options directly:
 
 ```toml
 [network]
@@ -177,6 +178,10 @@ verify_tls = true
 [download]
 chunk_size_kb = 256
 hash_chunk_size_mb = 1
+resume_default = true
+
+[torrent]
+listen_interfaces = "0.0.0.0:6881-6891"
 ```
 
 ---
