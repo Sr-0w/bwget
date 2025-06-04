@@ -475,8 +475,9 @@ def download(
 
     except Exception as e:
         console.print(f"[bold red]Unexpected error: {type(e).__name__}: {e}[/]")
-        if placeholder_pb:
-            placeholder_pb.stop()
+        if EARLY_PB:
+            EARLY_PB.stop()
+            EARLY_PB = None
         sys.exit(3)
 
 
