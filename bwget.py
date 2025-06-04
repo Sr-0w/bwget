@@ -402,11 +402,12 @@ def download_torrent(url: str, out_dir: Path, expected_sha256: str | None = None
             num_files = files.num_files() if hasattr(files, "num_files") else files.num_files
             if num_files == 1:
                 rel_path = files.file_path(0)
-                if hasattr(handle, "save_path"):
-                    save_attr = getattr(handle, "save_path")
-                    save_root = Path(save_attr() if callable(save_attr) else save_attr)
-                else:
-                    save_root = Path(handle.status().save_path)
+                # ``torrent_handle.save_path()`` was deprecated in libtorrent
+                # 2.0. Instead of conditionally calling this potentially
+                # deprecated method, always use the value from
+                # ``torrent_status.save_path`` which is supported across
+                # versions and avoids the warning.
+                save_root = Path(handle.status().save_path)
                 file_path = save_root / rel_path
                 if file_path.is_file():
                     verify_sha256_with_progress(file_path, expected_sha256)
