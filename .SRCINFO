@@ -1,17 +1,18 @@
 pkgbase = bwget
 	pkgdesc = A tiny, single-file Python replacement for wget with progress bar, resume, retries, and sha256 verification
-	pkgver = 0.3.6
+       pkgver = 0.4.0
 	pkgrel = 1
 	url = https://github.com/Sr-0w/bwget
 	arch = any
 	license = MIT
 	depends = python
 	depends = python-requests
-	depends = python-rich
-	depends = python-tomli
+       depends = python-rich
+       depends = python-libtorrent
+       depends = python-tomli
 	source = bwget.py
 	source = bwget.1
-	sha256sums = 3123d0cc6fa313559a21d294c76e2a0cc8248016f7bab25b7d9a2b0d6d0710d9
-	sha256sums = 78370b058f94a75249707d959d170e1aa55d8ef6b0e0129fa0db9ef746c60743
+       sha256sums = 2a7c2904cf096999601068b6cf40b4daffde76c25e7f592184945433863015f0
+       sha256sums = 5589b53c6d3ed396a37ee7b19f49b78387e01606698fa3fd35d726fb304cd7ce
 
 pkgname = bwget

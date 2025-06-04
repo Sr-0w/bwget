@@ -9,6 +9,7 @@
 ## Features
 
 * HTTP/HTTPS downloads with a clean progress bar ([Rich](https://github.com/Textualize/rich))
+* .torrent and magnet link support (single torrent at a time, no seeding)
 * Automatic filename selection (from URL or **Content-Disposition** header)
 * Resume support for partially downloaded files (HTTP range requests)
 * TLS verification and proxy support (CLI, config file, or environment variables)
@@ -21,12 +22,13 @@
 * Python 3.8+
 * [requests](https://pypi.org/project/requests/)
 * [rich](https://pypi.org/project/rich/)
+* [libtorrent](https://pypi.org/project/libtorrent/) (for torrent downloads)
 * [tomli](https://pypi.org/project/tomli/) (for Python < 3.11) or built‑in `tomllib`
 
 Install via pip:
 
 ```bash
-pip install requests rich tomli
+pip install requests rich libtorrent tomli
 ```
 
 ## Installation
@@ -74,6 +76,10 @@ This will build and install `/usr/bin/bwget`, the manpage, and completions.
 # Download a file
 bwget https://example.com/file.tar.gz
 
+# Download a torrent or magnet link
+bwget https://example.com/file.torrent
+bwget "magnet:?xt=urn:btih:..."
+
 # Force a **fresh** download (disable resume)
 bwget -c https://example.com/large.iso
 
@@ -101,7 +107,7 @@ Edit it to tweak defaults:
 ```toml
 [network]
 # proxy = "http://user:pass@proxy:8080"
-user_agent = "bwget/0.3.2 (Python/3.x)"
+user_agent = "bwget/0.4.0 (Python/3.x)"
 max_retries = 3
 base_backoff = 1.0
 request_timeout = 15
