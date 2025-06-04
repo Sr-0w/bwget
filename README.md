@@ -93,6 +93,9 @@ bwget --proxy http://proxy.local:3128 https://example.com/data.zip
 # Download many URLs from a file
 bwget -i urls.txt
 
+# Custom User-Agent
+bwget -U "MyDownloader/1.0" https://example.com/file.zip
+
 # Show version
 bwget --version
 ```

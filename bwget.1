@@ -36,9 +36,12 @@ are ignored.
 Expected SHA-256 checksum (64 hex digits).
 If omitted, bwget attempts to fetch \fI<URL>.sha256\fR automatically.
 .TP
+.B \-U, \-\-user-agent \fIUA\fR
+Override the HTTP User-Agent header with \fIUA\fR.
+.TP
 .B \-\-proxy \fIPROXY_URL\fR
 Use the specified HTTP/HTTPS proxy
-(e.g.\  \fIhttp://user:pass@host:port\fR).  
+(e.g.\  \fIhttp://user:pass@host:port\fR).
 Overrides any proxy defined in the config file or environment.
 .TP
 .B \-\-version

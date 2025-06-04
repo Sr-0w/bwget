@@ -665,6 +665,8 @@ def main() -> None:
     parser.add_argument("--sha256", metavar="HEXDIGEST",
                         help="expected SHA-256 (64 hex chars). "
                              "Auto-fetches <URL>.sha256 if not given.")
+    parser.add_argument("-U", "--user-agent", metavar="UA",
+                        help="override User-Agent header")
     parser.add_argument("--proxy", metavar="PROXY_URL",
                         help="HTTP/HTTPS proxy URL "
                              "(e.g., http://user:pass@host:port)")
@@ -682,6 +684,9 @@ def main() -> None:
             EARLY_PB.stop()
             EARLY_PB = None
         console.quiet = True
+
+    if ns.user_agent:
+        cfg["user_agent"] = ns.user_agent
 
     proxy_url_str_to_use = ns.proxy or cfg["proxy_url_config"]
     if proxy_url_str_to_use:
