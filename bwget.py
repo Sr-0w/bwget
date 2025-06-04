@@ -319,6 +319,16 @@ def is_torrent(url: str) -> bool:
     return url.startswith("magnet:") or url.lower().endswith(".torrent")
 
 
+def looks_like_url(s: str) -> bool:
+    """Return True if ``s`` appears to be a URL we can handle."""
+    parsed = urlsplit(s)
+    if parsed.scheme in {"http", "https", "ftp"}:
+        return bool(parsed.netloc)
+    if parsed.scheme == "magnet":
+        return True
+    return False
+
+
 def download_torrent(url: str, out_dir: Path, expected_sha256: str | None = None) -> None:
     """Download a single torrent or magnet link without seeding.
 
@@ -661,7 +671,8 @@ def main() -> None:
     parser.add_argument("url", nargs="?", help="HTTP(S) URL to fetch")
     parser.add_argument(
         "-i", "--input", metavar="FILE",
-        help="read URLs from FILE (one per line)"
+        help="read URLs from FILE (one per line). "
+             "If the positional URL looks like a local file, it is treated as such"
     )
     parser.add_argument("-o", "--output", metavar="FILE",
                         help="explicit output filename/path")
@@ -732,7 +743,20 @@ def main() -> None:
 
     urls: list[str] = []
     if ns.url:
-        urls.append(ns.url)
+        if looks_like_url(ns.url) or not Path(ns.url).is_file():
+            urls.append(ns.url)
+        else:
+            try:
+                with open(ns.url, "r", encoding="utf-8") as f:
+                    for line in f:
+                        url = line.strip()
+                        if url and not url.startswith("#"):
+                            urls.append(url)
+            except Exception as e:
+                console.print(
+                    f"[red]⨯ Could not read input file {ns.url}: {e}[/]"
+                )
+                sys.exit(1)
     if ns.input:
         try:
             with open(ns.input, "r", encoding="utf-8") as f:
