@@ -1,17 +1,17 @@
 # Maintainer: Your Name <you@example.com>
 pkgname=bwget
-pkgver=0.3.6
+pkgver=0.4.0
 pkgrel=1
 pkgdesc="A tiny, single-file Python replacement for wget with progress bar, resume, retries, and sha256 verification"
 arch=('any')
 url="https://github.com/Sr-0w/bwget"
 license=('MIT')
-depends=('python' 'python-requests' 'python-rich' 'python-tomli')
+depends=('python' 'python-requests' 'python-rich' 'python-libtorrent' 'python-tomli')
 source=("bwget.py"
         "bwget.1")
 sha256sums=(
-  '3123d0cc6fa313559a21d294c76e2a0cc8248016f7bab25b7d9a2b0d6d0710d9'
-  '78370b058f94a75249707d959d170e1aa55d8ef6b0e0129fa0db9ef746c60743'
+  '2a7c2904cf096999601068b6cf40b4daffde76c25e7f592184945433863015f0'
+  '5589b53c6d3ed396a37ee7b19f49b78387e01606698fa3fd35d726fb304cd7ce'
 )
 
 prepare() {

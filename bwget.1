@@ -1,4 +1,4 @@
-.TH BWGET 1 "22 May 2025" "bwget 0.3.5" "User Commands"
+.TH BWGET 1 "22 May 2025" "bwget 0.4.0" "User Commands"
 .SH NAME
 bwget \- “Better Wget” in Python
 .SH SYNOPSIS
@@ -8,7 +8,8 @@ URL [\fIoptions\fR]
 .SH DESCRIPTION
 \fBbwget\fR is a tiny, single-file Python replacement for the most-used parts
 of GNU wget.  
-It supports HTTP/HTTPS downloads with a nice progress bar, automatic filename
+It supports HTTP/HTTPS downloads with a nice progress bar, .torrent and magnet
+link handling (single torrent at a time, no seeding), automatic filename
 selection, automatic \fIresume\fR (now the default), TLS verification,
 automatic retries with exponential back-off, optional SHA-256 verification,
 proxy support, and user configuration via a TOML file.
@@ -47,7 +48,7 @@ A sample file is created on first run.
 
 .nf
 [network]
-user_agent       = "bwget/0.3.5 (Python/3.x)"
+user_agent       = "bwget/0.4.0 (Python/3.x)"
 max_retries      = 3
 base_backoff     = 1.0
 request_timeout  = 15
