@@ -15,7 +15,7 @@
 * TLS verification (can be disabled with `--no-check-certificate`, insecure!) and proxy support (CLI, config file, or environment variables)
 * Automatic retries with exponential backoff
 * Optional SHA‑256 checksum verification (auto-fetch `<URL>.sha256`)
-* Batch downloads from a file (`-i urls.txt`)
+* Batch downloads from a file (`-i urls.txt` or just `urls.txt`)
 * Configuration via TOML (`~/.config/bwget/config.toml`)
 
 ## Requirements
@@ -96,6 +96,8 @@ bwget --no-check-certificate https://example.com/file.tar.gz
 
 # Download many URLs from a file
 bwget -i urls.txt
+# or simply
+bwget urls.txt
 
 # Custom User-Agent
 bwget -U "MyDownloader/1.0" https://example.com/file.zip
