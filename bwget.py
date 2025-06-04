@@ -31,9 +31,20 @@ cols = [
     TransferSpeedColumn(),
     TimeRemainingColumn(),
 ]
-EARLY_PB = Progress(*cols, console=console, transient=True)
-EARLY_PB.add_task("Initializing…", total=None, start=True)
-EARLY_PB.start()
+
+# Display the early progress bar only when a download is likely to occur.
+show_early_bar = (
+    len(sys.argv) > 1
+    and not any(arg in {"-h", "--help", "--version"} for arg in sys.argv[1:])
+)
+
+EARLY_PB: Progress | None
+if show_early_bar:
+    EARLY_PB = Progress(*cols, console=console, transient=True)
+    EARLY_PB.add_task("Initializing…", total=None, start=True)
+    EARLY_PB.start()
+else:
+    EARLY_PB = None
 
 # ──────────────────────────────────────────
 # rest of the “heavy” imports come afterwards
