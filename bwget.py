@@ -376,9 +376,8 @@ def download_torrent(url: str, out_dir: Path, expected_sha256: str | None = None
 
     status = handle.status()
     torrent_name = status.name or getattr(handle, "name", lambda: "torrent")()
-    status_line = console.status(
-        f"[cyan]Downloading [bold]{escape(torrent_name)}[/] from {status.num_seeds} seeds - {status.num_peers} peers[/]",
-        spinner=None,
+    console.print(
+        f"[cyan]Downloading [bold]{escape(torrent_name)}[/] from {status.num_seeds} seeds - {status.num_peers} peers[/]"
     )
 
     cols = [
@@ -389,16 +388,13 @@ def download_torrent(url: str, out_dir: Path, expected_sha256: str | None = None
         TimeRemainingColumn(),
     ]
 
-    with status_line:
-        with Progress(*cols, console=console, transient=True) as progress:
-            task_id = progress.add_task("Progress", total=100.0)
-            while not handle.status().is_seeding:
-                s = handle.status()
-                progress.update(task_id, completed=s.progress * 100)
-                status_line.update(
-                    f"[cyan]Downloading [bold]{escape(torrent_name)}[/] from {s.num_seeds} seeds - {s.num_peers} peers[/]"
-                )
-                time.sleep(0.5)
+    with Progress(*cols, console=console, transient=True) as progress:
+        task_id = progress.add_task(torrent_name, total=100.0)
+        while not handle.status().is_seeding:
+            s = handle.status()
+            desc = f"{torrent_name} ({s.num_seeds} seeds, {s.num_peers} peers)"
+            progress.update(task_id, completed=s.progress * 100, description=desc)
+            time.sleep(0.5)
         progress.update(task_id, completed=100)
 
     console.print("[green]✔ Torrent download complete[/]")
