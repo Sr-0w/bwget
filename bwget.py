@@ -4,10 +4,10 @@ bwget -- “Better Wget” in Python
 --------------------------------
 
 A tiny, single‑file replacement for the parts of GNU wget most people
-actually use: downloading one HTTP/HTTPS resource with a pretty progress
-bar, automatic filename selection, optional resume, TLS verification,
-automatic retries, optional SHA‑256 verification, and proxy support
-via CLI, config file, or environment variables.
+actually use: downloading one HTTP/HTTPS resource (or a single torrent)
+with a pretty progress bar, automatic filename selection, optional resume,
+TLS verification, automatic retries, optional SHA‑256 verification, and
+proxy support via CLI, config file, or environment variables.
 """
 
 from __future__ import annotations
@@ -55,6 +55,7 @@ import os
 import platform
 import re
 import time
+import tempfile
 from pathlib import Path
 from textwrap import shorten
 from urllib.parse import urlsplit, urlunsplit
@@ -85,7 +86,7 @@ except ImportError:
 # ---------------------------------------------------------------------------
 # Version & Initial Configuration
 # ---------------------------------------------------------------------------
-VERSION = "0.3.6"  # new minor version for spinner integration
+VERSION = "0.4.0"  # torrent support
 
 cfg = {
     "user_agent": f"bwget/{VERSION} (Python/{sys.version_info.major}.{sys.version_info.minor})",
@@ -93,6 +94,7 @@ cfg = {
     "request_timeout": 15, "stream_timeout": 30,
     "chunk_size": 1 << 18, "hash_chunk_size": 1 << 20,
     "proxy_url_config": None, "final_proxies_dict": None,
+    "verify_tls": True,
 }
 
 TRANSIENT_STATUS = {500, 502, 503, 504}
@@ -125,6 +127,7 @@ max_retries = {cfg['max_retries']}
 base_backoff = {cfg['base_backoff']:.1f}
 request_timeout = {cfg['request_timeout']}
 stream_timeout = {cfg['stream_timeout']}
+verify_tls = true
 
 [download]
 chunk_size_kb = {cfg['chunk_size'] // 1024}
@@ -154,9 +157,15 @@ def load_and_apply_config():
     if config_path.exists():
         try:
             with open(config_path, "rb") as f:
-                loaded_toml_config = tomllib.load(f) if tomllib_present else toml.load(open(config_path, "r", encoding="utf-8"))
+                if tomllib_present:
+                    loaded_toml_config = tomllib.load(f)
+                else:
+                    loaded_toml_config = toml.load(f)
         except Exception as e:
-            console.print(f"[warning]Could not load/parse config {escape(str(config_path))}: {e}[/warning]", style="yellow")
+            console.print(
+                f"[warning]Could not load/parse config {escape(str(config_path))}: {e}[/warning]",
+                style="yellow",
+            )
     elif tomllib_present or toml_present:
         create_sample_config(config_path)
 
@@ -168,6 +177,7 @@ def load_and_apply_config():
         "request_timeout": int(net_conf.get("request_timeout", cfg["request_timeout"])),
         "stream_timeout": int(net_conf.get("stream_timeout", cfg["stream_timeout"])),
         "proxy_url_config": net_conf.get("proxy"),
+        "verify_tls": bool(net_conf.get("verify_tls", cfg["verify_tls"])),
         "chunk_size": int(dl_conf.get("chunk_size_kb", cfg["chunk_size"] // 1024)) * 1024,
         "hash_chunk_size": int(dl_conf.get("hash_chunk_size_mb", cfg["hash_chunk_size"] // (1024*1024))) * 1024 * 1024,
     })
@@ -197,6 +207,7 @@ def request_head(url: str, headers: dict) -> requests.Response | None:
             timeout=cfg["request_timeout"],
             headers=headers,
             proxies=cfg["final_proxies_dict"],
+            verify=cfg["verify_tls"],
         )
     except RequestException as e:
         console.print(f"[yellow]ⓘ HEAD request failed for {shorten(url, 70)}: {e}[/]", highlight=True)
@@ -211,6 +222,7 @@ def fetch_remote_sha256(url: str, headers: dict) -> str | None:
             timeout=cfg["request_timeout"],
             headers=headers,
             proxies=cfg["final_proxies_dict"],
+            verify=cfg["verify_tls"],
         )
         r.raise_for_status()
         first_line = r.text.strip().splitlines()[0]
@@ -240,6 +252,7 @@ def _open_stream(url: str, stream_headers: dict[str, str]) -> requests.Response:
                 headers=stream_headers,
                 timeout=cfg["stream_timeout"],
                 proxies=cfg["final_proxies_dict"],
+                verify=cfg["verify_tls"],
             )
             r.raise_for_status()
             return r
@@ -300,6 +313,156 @@ def verify_sha256_with_progress(file_path: Path, expected_digest: str):
                 f"[red]⨯ Could not delete mismatched file {escape(str(file_path))}: {e}[/]"
             )
         sys.exit(2)
+
+
+def is_torrent(url: str) -> bool:
+    return url.startswith("magnet:") or url.lower().endswith(".torrent")
+
+
+def looks_like_url(s: str) -> bool:
+    """Return True if ``s`` appears to be a URL we can handle."""
+    parsed = urlsplit(s)
+    if parsed.scheme in {"http", "https", "ftp"}:
+        return bool(parsed.netloc)
+    if parsed.scheme == "magnet":
+        return True
+    return False
+
+
+def download_torrent(url: str, out_dir: Path, expected_sha256: str | None = None) -> None:
+    """Download a single torrent or magnet link without seeding.
+
+    If ``expected_sha256`` is provided and the torrent contains exactly one
+    file, its SHA‑256 will be verified after the download completes.
+    """
+    global EARLY_PB
+    if EARLY_PB is not None:
+        for task in EARLY_PB.tasks:
+            EARLY_PB.update(task.id, description="Connecting…")
+
+    try:
+        import libtorrent as lt
+    except ImportError:
+        console.print(
+            "[red]⨯ libtorrent module is required for torrent downloads.[/]")
+        sys.exit(3)
+
+    ses = lt.session()
+    if hasattr(lt, "settings_pack"):
+        pack = lt.settings_pack()
+        pack.listen_interfaces = "0.0.0.0:6881-6891"
+        ses.apply_settings(pack)
+
+    use_modern_api = hasattr(lt, "add_torrent_params")
+    params = lt.add_torrent_params() if use_modern_api else {"save_path": str(out_dir)}
+    if use_modern_api:
+        params.save_path = str(out_dir)
+
+    if url.startswith("magnet:"):
+        if use_modern_api and hasattr(lt, "add_magnet_uri"):
+            try:
+                handle = lt.add_magnet_uri(ses, url, params)
+            except Exception:
+                if hasattr(lt, "parse_magnet_uri"):
+                    params = lt.parse_magnet_uri(url)
+                    params.save_path = str(out_dir)
+                    handle = ses.add_torrent(params)
+                else:
+                    params = {"save_path": str(out_dir), "url": url}
+                    handle = ses.add_torrent(params)
+        else:
+            if use_modern_api and hasattr(lt, "parse_magnet_uri"):
+                params = lt.parse_magnet_uri(url)
+                params.save_path = str(out_dir)
+            else:
+                params = {"save_path": str(out_dir), "url": url}
+            handle = ses.add_torrent(params)
+    else:
+        r = requests.get(
+            url,
+            timeout=cfg["request_timeout"],
+            headers={"User-Agent": cfg["user_agent"]},
+            proxies=cfg["final_proxies_dict"],
+            verify=cfg["verify_tls"],
+        )
+        r.raise_for_status()
+        with tempfile.NamedTemporaryFile(delete=False) as tf:
+            tf.write(r.content)
+            temp_path = tf.name
+        info = lt.torrent_info(temp_path)
+        os.unlink(temp_path)
+        if use_modern_api:
+            params.ti = info
+        else:
+            params["ti"] = info
+        handle = ses.add_torrent(params)
+
+    if EARLY_PB is not None:
+        for task in EARLY_PB.tasks:
+            EARLY_PB.update(task.id, description="Fetching metadata…")
+
+    status = handle.status()
+    torrent_name = status.name or getattr(handle, "name", lambda: "torrent")()
+    console.print(
+        f"[cyan]Downloading [bold]{escape(torrent_name)}[/]…[/]"
+    )
+
+    # has_metadata() is deprecated in modern libtorrent; use torrent_status
+    while not handle.status().has_metadata:
+        time.sleep(0.5)
+
+    info = handle.torrent_file() if hasattr(handle, "torrent_file") else handle.get_torrent_info()
+    total_bytes = info.total_size()
+    status = handle.status()
+
+    if EARLY_PB is not None:
+        EARLY_PB.stop()
+        EARLY_PB = None
+
+    cols = [
+        TextColumn("[green]{task.description}[/] [orange1]{task.percentage:>6.2f}%[/]"),
+        BarColumn(None),
+        DownloadColumn(True),
+        TransferSpeedColumn(),
+        TimeRemainingColumn(),
+        TextColumn("[orange1]{task.fields[seeds]}/{task.fields[peers]} peers[/]"),
+    ]
+
+    with Progress(*cols, console=console, transient=True) as progress:
+        task_id = progress.add_task("Progress", total=total_bytes, seeds=status.num_seeds, peers=status.num_peers, start=True)
+        while not handle.status().is_seeding:
+            s = handle.status()
+            progress.update(task_id, completed=s.total_wanted_done, seeds=s.num_seeds, peers=s.num_peers)
+            time.sleep(0.5)
+        progress.update(task_id, completed=total_bytes)
+
+    console.print("[green]✔ Torrent download complete[/]")
+
+    if expected_sha256:
+        try:
+            info = handle.torrent_file() if hasattr(handle, "torrent_file") else handle.get_torrent_info()
+            files = info.files()
+            num_files = files.num_files() if hasattr(files, "num_files") else files.num_files
+            if num_files == 1:
+                rel_path = files.file_path(0)
+                # ``torrent_handle.save_path()`` was deprecated in libtorrent
+                # 2.0. Instead of conditionally calling this potentially
+                # deprecated method, always use the value from
+                # ``torrent_status.save_path`` which is supported across
+                # versions and avoids the warning.
+                save_root = Path(handle.status().save_path)
+                file_path = save_root / rel_path
+                if file_path.is_file():
+                    verify_sha256_with_progress(file_path, expected_sha256)
+                else:
+                    console.print(
+                        f"[yellow]⚠ Expected file {escape(str(file_path))} not found for checksum.[/]")
+            else:
+                console.print("[yellow]⚠ Cannot verify SHA-256 for multi-file torrent.[/]")
+        except Exception as e:
+            console.print(f"[yellow]⚠ SHA-256 verification skipped: {e}[/]")
+
+    ses.remove_torrent(handle)
 
 
 def download(
@@ -414,7 +577,7 @@ def download(
             start_t, dl_sess = time.perf_counter(), 0
             with Progress(*cols, console=console, transient=True) as progress:
                 task_id = progress.add_task(
-                    "Progress" if mode == "wb" else "Res",
+                    "Progress" if mode == "wb" else "Progress",
                     total=total_prog,
                     completed=comp_prog,
                     start=(comp_prog < total_prog or not total_prog),
@@ -496,7 +659,7 @@ def download(
 # CLI entry-point
 # ---------------------------------------------------------------------------
 def main() -> None:
-    global cfg
+    global cfg, EARLY_PB
 
     load_and_apply_config()
 
@@ -505,7 +668,12 @@ def main() -> None:
         description=__doc__.splitlines()[2].strip(),
         formatter_class=argparse.RawTextHelpFormatter,
     )
-    parser.add_argument("url", help="HTTP(S) URL to fetch")
+    parser.add_argument("url", nargs="?", help="HTTP(S) URL to fetch")
+    parser.add_argument(
+        "-i", "--input", metavar="FILE",
+        help="read URLs from FILE (one per line). "
+             "If the positional URL looks like a local file, it is treated as such"
+    )
     parser.add_argument("-o", "--output", metavar="FILE",
                         help="explicit output filename/path")
     # Default is now to *resume* automatically.
@@ -521,9 +689,17 @@ def main() -> None:
     parser.add_argument("--sha256", metavar="HEXDIGEST",
                         help="expected SHA-256 (64 hex chars). "
                              "Auto-fetches <URL>.sha256 if not given.")
+
     parser.add_argument("--proxy", metavar="PROXY_URL",
                         help="HTTP/HTTPS proxy URL "
                              "(e.g., http://user:pass@host:port)")
+    parser.add_argument("-U", "--user-agent", metavar="UA",
+                        help="override User-Agent header")
+    parser.add_argument(
+        "--no-check-certificate",
+        action="store_true",
+        help="disable TLS certificate verification (INSECURE)",
+    )
     parser.add_argument("--version", action="version",
                         version=f"%(prog)s {VERSION}")
 
@@ -531,13 +707,17 @@ def main() -> None:
         parser.print_help(sys.stderr)
         sys.exit(1)
     ns = parser.parse_args()
+    cfg["verify_tls"] = not ns.no_check_certificate
 
-    global EARLY_PB
     if ns.quiet:
         if EARLY_PB:
             EARLY_PB.stop()
             EARLY_PB = None
         console.quiet = True
+
+    if ns.user_agent:
+        cfg["user_agent"] = ns.user_agent
+
 
     proxy_url_str_to_use = ns.proxy or cfg["proxy_url_config"]
     if proxy_url_str_to_use:
@@ -559,27 +739,79 @@ def main() -> None:
     else:
         cfg["final_proxies_dict"] = None
 
-    req_hdrs     = {"User-Agent": cfg["user_agent"]}
-    expected_sha = (ns.sha256.lower()
-                    if ns.sha256 else fetch_remote_sha256(ns.url, req_hdrs))
+    req_hdrs = {"User-Agent": cfg["user_agent"]}
 
-    if ns.sha256 and (not expected_sha or len(expected_sha) != 64
-                      or not all(c in "0123456789abcdefABCDEF" for c in expected_sha)):
-        console.print("[red]⨯ Invalid SHA-256 provided (must be 64 hex chars).[/]")
-        sys.exit(2)
+    urls: list[str] = []
+    success_count = 0
+    if ns.url:
+        if looks_like_url(ns.url) or not Path(ns.url).is_file():
+            urls.append(ns.url)
+        else:
+            try:
+                with open(ns.url, "r", encoding="utf-8") as f:
+                    for line in f:
+                        url = line.strip()
+                        if url and not url.startswith("#"):
+                            urls.append(url)
+            except Exception as e:
+                console.print(
+                    f"[red]⨯ Could not read input file {ns.url}: {e}[/]"
+                )
+                sys.exit(1)
+    if ns.input:
+        try:
+            with open(ns.input, "r", encoding="utf-8") as f:
+                for line in f:
+                    url = line.strip()
+                    if url and not url.startswith("#"):
+                        urls.append(url)
+        except Exception as e:
+            console.print(f"[red]⨯ Could not read input file {ns.input}: {e}[/]")
+            sys.exit(1)
 
-    if expected_sha and len(expected_sha) != 64:
-        console.print(f"[red]⨯ Fetched SHA-256 invalid (len {len(expected_sha)}).[/]")
-        expected_sha = None
+    if not urls:
+        console.print("[red]⨯ No URL provided.[/]")
+        sys.exit(1)
 
-    initial_path = pick_initial_filename(ns.url, ns.output)
-    download(
-        ns.url,
-        initial_path,
-        ns.output is not None,
-        ns.resume,
-        expected_sha,
-    )
+    total_urls = len(urls)
+
+    for url in urls:
+        expected_sha = ns.sha256.lower() if ns.sha256 else fetch_remote_sha256(url, req_hdrs)
+
+        if ns.sha256 and (
+            not expected_sha
+            or len(expected_sha) != 64
+            or not all(c in "0123456789abcdefABCDEF" for c in expected_sha)
+        ):
+            console.print("[red]⨯ Invalid SHA-256 provided (must be 64 hex chars). Skipping.[/]")
+            continue
+
+        if expected_sha and len(expected_sha) != 64:
+            console.print(f"[red]⨯ Fetched SHA-256 invalid (len {len(expected_sha)}).[/]")
+            expected_sha = None
+
+        try:
+            if is_torrent(url):
+                out_dir = Path(ns.output).expanduser() if ns.output else Path('.')
+                download_torrent(url, out_dir, expected_sha)
+            else:
+                initial_path = pick_initial_filename(url, ns.output)
+                download(
+                    url,
+                    initial_path,
+                    ns.output is not None,
+                    ns.resume,
+                    expected_sha,
+                )
+            success_count += 1
+        except SystemExit as exc:
+            if int(getattr(exc, "code", 1)) == 130:
+                raise
+            # Errors already reported; continue with next URL
+            continue
+
+    plural = "file" if total_urls == 1 else "files"
+    console.print(f"[green]✔[/] Downloaded {success_count}/{total_urls} {plural}")
 
 
 if __name__ == "__main__":

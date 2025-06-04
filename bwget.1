@@ -1,15 +1,17 @@
-.TH BWGET 1 "22 May 2025" "bwget 0.3.5" "User Commands"
+.TH BWGET 1 "22 May 2025" "bwget 0.4.0" "User Commands"
 .SH NAME
 bwget \- “Better Wget” in Python
 .SH SYNOPSIS
 .B bwget
-URL [\fIoptions\fR]
+[\fIoptions\fR] URL
 
 .SH DESCRIPTION
 \fBbwget\fR is a tiny, single-file Python replacement for the most-used parts
 of GNU wget.  
-It supports HTTP/HTTPS downloads with a nice progress bar, automatic filename
-selection, automatic \fIresume\fR (now the default), TLS verification,
+It supports HTTP/HTTPS downloads with a nice progress bar, .torrent and magnet
+link handling (single torrent at a time, no seeding), automatic filename
+selection, automatic \fIresume\fR (now the default), TLS verification
+(can be disabled with \fB--no-check-certificate\fR, insecure),
 automatic retries with exponential back-off, optional SHA-256 verification,
 proxy support, and user configuration via a TOML file.
 
@@ -27,14 +29,24 @@ file is present and the server supports HTTP range requests.  Supplying
 .B \-q, \-\-quiet
 Suppress non-error output (hides the progress bar).
 .TP
+.B \-i, \-\-input \fIFILE\fR
+Read URLs from \fIFILE\fR (one per line). Lines starting with '#'
+are ignored.
+.TP
 .B \-\-sha256 \fIDIGEST\fR
-Expected SHA-256 checksum (64 hex digits).  
+Expected SHA-256 checksum (64 hex digits).
 If omitted, bwget attempts to fetch \fI<URL>.sha256\fR automatically.
+.TP
+.B \-U, \-\-user-agent \fIUA\fR
+Override the HTTP User-Agent header with \fIUA\fR.
 .TP
 .B \-\-proxy \fIPROXY_URL\fR
 Use the specified HTTP/HTTPS proxy
-(e.g.\  \fIhttp://user:pass@host:port\fR).  
+(e.g.\  \fIhttp://user:pass@host:port\fR).
 Overrides any proxy defined in the config file or environment.
+.TP
+.B \-\-no-check-certificate
+Skip TLS certificate verification (\fIDANGEROUS\fR; vulnerable to MITM).
 .TP
 .B \-\-version
 Display version information and exit.
@@ -47,11 +59,13 @@ A sample file is created on first run.
 
 .nf
 [network]
-user_agent       = "bwget/0.3.5 (Python/3.x)"
+user_agent       = "bwget/0.4.0 (Python/3.x)"
 max_retries      = 3
 base_backoff     = 1.0
 request_timeout  = 15
 stream_timeout   = 30
+# verify TLS certificates (set to false to disable verification)
+verify_tls      = true
 # proxy          = "http://user:pass@proxy:8080"
 
 [download]
@@ -82,6 +96,9 @@ Verify SHA-256 while downloading:
 .TP
 Download through a proxy:
 .B bwget \-\-proxy http://proxy.local:3128 https://example.com/data.zip
+.TP
+Download a batch of URLs from a file:
+.B bwget \-i urls.txt
 
 .SH SEE ALSO
 wget(1), curl(1)
