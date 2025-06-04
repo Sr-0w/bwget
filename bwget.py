@@ -315,8 +315,8 @@ def download_torrent(url: str, out_dir: Path, expected_sha256: str | None = None
     """
     global EARLY_PB
     if EARLY_PB is not None:
-        EARLY_PB.stop()
-        EARLY_PB = None
+        for task in EARLY_PB.tasks:
+            EARLY_PB.update(task.id, description="Connecting…")
 
     try:
         import libtorrent as lt
@@ -374,6 +374,10 @@ def download_torrent(url: str, out_dir: Path, expected_sha256: str | None = None
             params["ti"] = info
         handle = ses.add_torrent(params)
 
+    if EARLY_PB is not None:
+        for task in EARLY_PB.tasks:
+            EARLY_PB.update(task.id, description="Fetching metadata…")
+
     status = handle.status()
     torrent_name = status.name or getattr(handle, "name", lambda: "torrent")()
     console.print(
@@ -387,6 +391,10 @@ def download_torrent(url: str, out_dir: Path, expected_sha256: str | None = None
     info = handle.torrent_file() if hasattr(handle, "torrent_file") else handle.get_torrent_info()
     total_bytes = info.total_size()
     status = handle.status()
+
+    if EARLY_PB is not None:
+        EARLY_PB.stop()
+        EARLY_PB = None
 
     cols = [
         TextColumn("[green]{task.description}[/] [orange1]{task.percentage:>6.2f}%[/]"),
