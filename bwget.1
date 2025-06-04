@@ -3,7 +3,7 @@
 bwget \- “Better Wget” in Python
 .SH SYNOPSIS
 .B bwget
-URL [\fIoptions\fR]
+[\fIoptions\fR] URL
 
 .SH DESCRIPTION
 \fBbwget\fR is a tiny, single-file Python replacement for the most-used parts
@@ -29,9 +29,16 @@ file is present and the server supports HTTP range requests.  Supplying
 .B \-q, \-\-quiet
 Suppress non-error output (hides the progress bar).
 .TP
+.B \-i, \-\-input \fIFILE\fR
+Read URLs from \fIFILE\fR (one per line). Lines starting with '#'
+are ignored.
+.TP
 .B \-\-sha256 \fIDIGEST\fR
-Expected SHA-256 checksum (64 hex digits).  
+Expected SHA-256 checksum (64 hex digits).
 If omitted, bwget attempts to fetch \fI<URL>.sha256\fR automatically.
+.TP
+.B \-U, \-\-user-agent \fIUA\fR
+Override the HTTP User-Agent header with \fIUA\fR.
 .TP
 .B \-\-proxy \fIPROXY_URL\fR
 Use the specified HTTP/HTTPS proxy
@@ -89,6 +96,9 @@ Verify SHA-256 while downloading:
 .TP
 Download through a proxy:
 .B bwget \-\-proxy http://proxy.local:3128 https://example.com/data.zip
+.TP
+Download a batch of URLs from a file:
+.B bwget \-i urls.txt
 
 .SH SEE ALSO
 wget(1), curl(1)
