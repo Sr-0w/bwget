@@ -742,6 +742,7 @@ def main() -> None:
     req_hdrs = {"User-Agent": cfg["user_agent"]}
 
     urls: list[str] = []
+    success_count = 0
     if ns.url:
         if looks_like_url(ns.url) or not Path(ns.url).is_file():
             urls.append(ns.url)
@@ -772,6 +773,8 @@ def main() -> None:
         console.print("[red]⨯ No URL provided.[/]")
         sys.exit(1)
 
+    total_urls = len(urls)
+
     for url in urls:
         expected_sha = ns.sha256.lower() if ns.sha256 else fetch_remote_sha256(url, req_hdrs)
 
@@ -800,11 +803,15 @@ def main() -> None:
                     ns.resume,
                     expected_sha,
                 )
+            success_count += 1
         except SystemExit as exc:
             if int(getattr(exc, "code", 1)) == 130:
                 raise
             # Errors already reported; continue with next URL
             continue
+
+    plural = "file" if total_urls == 1 else "files"
+    console.print(f"[green]✔[/] Downloaded {success_count}/{total_urls} {plural}")
 
 
 if __name__ == "__main__":
