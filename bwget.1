@@ -29,6 +29,9 @@ file is present and the server supports HTTP range requests.  Supplying
 .B \-q, \-\-quiet
 Suppress non-error output (hides the progress bar).
 .TP
+.B \-\-limit-rate \fIKBPS\fR
+Throttle download bandwidth to KBPS (KiB/s).
+.TP
 .B \-i, \-\-input \fIFILE\fR
 Read URLs from \fIFILE\fR (one per line). Lines starting with '#'
 are ignored.
@@ -44,6 +47,9 @@ Override the HTTP User-Agent header with \fIUA\fR.
 Use the specified HTTP/HTTPS proxy
 (e.g.\  \fIhttp://user:pass@host:port\fR).
 Overrides any proxy defined in the config file or environment.
+.TP
+.B \-\-max-seeds \fIN\fR
+Limit active torrent peers to \fIN\fR connections.
 .TP
 .B \-\-no-check-certificate
 Skip TLS certificate verification (\fIDANGEROUS\fR; vulnerable to MITM).
@@ -72,9 +78,11 @@ verify_tls      = true
 chunk_size_kb      = 256
 hash_chunk_size_mb = 1
 resume_default    = true
+bandwidth_limit_kbps = 0
 
 [torrent]
 listen_interfaces = "0.0.0.0:6881-6891"
+max_seeds = 0
 .fi
 
 .SH EXIT STATUS
