@@ -1,6 +1,6 @@
 # 🚀 bwget - Better Wget
 
-**bwget** is a minimalist yet powerful single-file downloader crafted in Python, designed to simplify and enhance your downloading experience. Inspired by the legendary GNU `wget`, bwget adds intuitive features, seamless torrent support, and sleek progress visuals—all within a compact script.
+**bwget** is a minimalist yet powerful single-file downloader crafted in Python, designed to simplify and enhance your downloading experience. Inspired by the legendary GNU `wget`, bwget adds intuitive features, seamless torrent support, and sleek progress visuals all within a compact script.
 
 ---
 
