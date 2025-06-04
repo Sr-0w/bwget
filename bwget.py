@@ -645,7 +645,11 @@ def main() -> None:
         description=__doc__.splitlines()[2].strip(),
         formatter_class=argparse.RawTextHelpFormatter,
     )
-    parser.add_argument("url", help="HTTP(S) URL to fetch")
+    parser.add_argument("url", nargs="?", help="HTTP(S) URL to fetch")
+    parser.add_argument(
+        "-i", "--input", metavar="FILE",
+        help="read URLs from FILE (one per line)"
+    )
     parser.add_argument("-o", "--output", metavar="FILE",
                         help="explicit output filename/path")
     # Default is now to *resume* automatically.
@@ -699,31 +703,59 @@ def main() -> None:
     else:
         cfg["final_proxies_dict"] = None
 
-    req_hdrs     = {"User-Agent": cfg["user_agent"]}
-    expected_sha = (ns.sha256.lower()
-                    if ns.sha256 else fetch_remote_sha256(ns.url, req_hdrs))
+    req_hdrs = {"User-Agent": cfg["user_agent"]}
 
-    if ns.sha256 and (not expected_sha or len(expected_sha) != 64
-                      or not all(c in "0123456789abcdefABCDEF" for c in expected_sha)):
-        console.print("[red]⨯ Invalid SHA-256 provided (must be 64 hex chars).[/]")
-        sys.exit(2)
+    urls: list[str] = []
+    if ns.url:
+        urls.append(ns.url)
+    if ns.input:
+        try:
+            with open(ns.input, "r", encoding="utf-8") as f:
+                for line in f:
+                    url = line.strip()
+                    if url and not url.startswith("#"):
+                        urls.append(url)
+        except Exception as e:
+            console.print(f"[red]⨯ Could not read input file {ns.input}: {e}[/]")
+            sys.exit(1)
 
-    if expected_sha and len(expected_sha) != 64:
-        console.print(f"[red]⨯ Fetched SHA-256 invalid (len {len(expected_sha)}).[/]")
-        expected_sha = None
+    if not urls:
+        console.print("[red]⨯ No URL provided.[/]")
+        sys.exit(1)
 
-    if is_torrent(ns.url):
-        out_dir = Path(ns.output).expanduser() if ns.output else Path('.')
-        download_torrent(ns.url, out_dir, expected_sha)
-    else:
-        initial_path = pick_initial_filename(ns.url, ns.output)
-        download(
-            ns.url,
-            initial_path,
-            ns.output is not None,
-            ns.resume,
-            expected_sha,
-        )
+    for url in urls:
+        expected_sha = ns.sha256.lower() if ns.sha256 else fetch_remote_sha256(url, req_hdrs)
+
+        if ns.sha256 and (
+            not expected_sha
+            or len(expected_sha) != 64
+            or not all(c in "0123456789abcdefABCDEF" for c in expected_sha)
+        ):
+            console.print("[red]⨯ Invalid SHA-256 provided (must be 64 hex chars). Skipping.[/]")
+            continue
+
+        if expected_sha and len(expected_sha) != 64:
+            console.print(f"[red]⨯ Fetched SHA-256 invalid (len {len(expected_sha)}).[/]")
+            expected_sha = None
+
+        try:
+            if is_torrent(url):
+                out_dir = Path(ns.output).expanduser() if ns.output else Path('.')
+                download_torrent(url, out_dir, expected_sha)
+            else:
+                initial_path = pick_initial_filename(url, ns.output)
+                download(
+                    url,
+                    initial_path,
+                    ns.output is not None,
+                    ns.resume,
+                    expected_sha,
+                )
+        except SystemExit as exc:
+            if int(getattr(exc, "code", 1)) == 130:
+                raise
+            # Errors already reported; continue with next URL
+            continue
 
 
 if __name__ == "__main__":
