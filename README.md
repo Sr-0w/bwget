@@ -1,40 +1,42 @@
-# bwget
+# 🚀 bwget - Better Wget
 
-**Better Wget** in Python — a tiny single-file downloader with the essentials of GNU `wget`.
-
-![bwget demo](https://pouch.jumpshare.com/preview/P97VWVAAv80eYgIit58iPW7Z9p5B2Gii1s3TPaJwO_8I-1Ix-3go_5QyWkuWnjxU2A4Rb8yKhJS2MLfj-2Drjw5QoTvJ8_fU7PXfI7G3wVM)
+**bwget** is a minimalist yet powerful single-file downloader crafted in Python, designed to simplify and enhance your downloading experience. Inspired by the legendary GNU `wget`, bwget adds intuitive features, seamless torrent support, and sleek progress visuals—all within a compact script.
 
 ---
 
-## Features
+## 🌟 Key Features
 
-- HTTP/HTTPS downloads with a Rich progress bar
-- `.torrent` and magnet link support (one torrent at a time, no seeding)
-- Automatic filename detection from the URL or `Content-Disposition`
-- Resume partially downloaded files
-- TLS verification (can be disabled with `--no-check-certificate`) and proxy support
-- Automatic retries with exponential backoff
-- Optional SHA‑256 verification (`<URL>.sha256` auto-fetch)
-- Batch downloads from a list (`-i urls.txt` or `urls.txt`)
-- TOML configuration file at `~/.config/bwget/config.toml`
+* 🌐 **HTTP/HTTPS Downloads:** Effortlessly download files with an elegant progress bar powered by Rich.
+* 🔗 **Torrent Support:** Download `.torrent` files and magnet links with ease (single torrent at a time, no seeding).
+* 📁 **Automatic Filename Detection:** Picks the perfect filename from URLs or server headers.
+* ⏳ **Resume Capability:** Seamlessly continue interrupted downloads.
+* 🔐 **Secure Connections:** Robust TLS verification, with an option to bypass (`--no-check-certificate`).
+* 🛡️ **SHA-256 Verification:** Automatically verifies file integrity via SHA-256.
+* 🔄 **Automatic Retries:** Smart retries with exponential backoff for robust downloads.
+* 📃 **Batch Downloads:** Handle multiple downloads effortlessly from a list file (`urls.txt`).
+* 🛠️ **Configurable:** Customize behavior easily through a convenient TOML config file.
 
-## Requirements
+---
 
-- Python 3.8 or newer
-- [requests](https://pypi.org/project/requests/)
-- [rich](https://pypi.org/project/rich/)
-- [libtorrent](https://pypi.org/project/libtorrent/) for torrent downloads
-- `tomli` on Python < 3.11, otherwise the built‑in `tomllib`
+## 🛠️ Requirements
 
-Install dependencies with pip:
+* **Python 3.8+**
+* `requests`, `rich`, and `libtorrent` packages
+* `tomli` (Python <3.11) or built-in `tomllib` (Python ≥3.11)
+
+Install all dependencies quickly:
 
 ```bash
 pip install requests rich libtorrent tomli
 ```
 
-## Installation
+---
 
-### From source
+## ⚙️ Installation
+
+### 📂 From Source
+
+Clone and install quickly:
 
 ```bash
 git clone https://github.com/Sr-0w/bwget.git
@@ -43,18 +45,18 @@ chmod +x bwget.py
 sudo mv bwget.py /usr/local/bin/bwget
 ```
 
-Install the man page if you want:
+Optionally, install the provided man page:
 
 ```bash
 sudo install -Dm644 bwget.1 /usr/share/man/man1/bwget.1
 ```
 
-### Packages
+### 📦 Packages
 
-- **AUR**: <https://aur.archlinux.org/packages/bwget>
-- **COPR**: <https://copr.fedorainfracloud.org/coprs/srobin/bwget/>
+* **Arch Linux (AUR)**: [bwget](https://aur.archlinux.org/packages/bwget)
+* **Fedora (COPR)**: [bwget](https://copr.fedorainfracloud.org/coprs/srobin/bwget/)
 
-Arch users can also build the package manually:
+Install from AUR manually:
 
 ```bash
 git clone https://aur.archlinux.org/bwget.git
@@ -62,54 +64,79 @@ cd bwget
 makepkg -si
 ```
 
-## Usage
+---
+
+## 📌 Usage Examples
+
+Simple file download:
 
 ```bash
-# Download a file
 bwget https://example.com/file.tar.gz
+```
 
-# Download a torrent or magnet link
+Download torrent or magnet link:
+
+```bash
 bwget https://example.com/file.torrent
 bwget "magnet:?xt=urn:btih:..."
+```
 
-# Force a fresh download (ignore resume data)
+Force new download (ignore resume):
+
+```bash
 bwget -c https://example.com/large.iso
+```
 
-# SHA‑256 verification (HTTP or single-file torrent)
+SHA-256 verification:
+
+```bash
 bwget --sha256 0123456789abcdef... https://example.com/app.tar.gz
+```
 
-# Use an HTTP proxy
+Using an HTTP proxy:
+
+```bash
 bwget --proxy http://proxy.local:3128 https://example.com/data.zip
+```
 
-# Disable TLS verification (insecure)
+Disable TLS verification:
+
+```bash
 bwget --no-check-certificate https://example.com/file.tar.gz
+```
 
-# Download many URLs from a file
+Batch download:
+
+```bash
 bwget -i urls.txt
+```
 
-# Custom User-Agent
+Custom user-agent:
+
+```bash
 bwget -U "MyDownloader/1.0" https://example.com/file.zip
+```
 
-# Show version
+Check version:
+
+```bash
 bwget --version
 ```
 
-Checksum verification works for regular HTTP downloads and for single-file torrents when a `--sha256` digest is provided.
+---
 
-## Configuration
+## 🔧 Configuration
 
-On first run bwget creates a sample config at:
+On first launch, bwget creates a default configuration at:
 
-```text
-$XDG_CONFIG_HOME/bwget/config.toml
-# (defaults to ~/.config/bwget/config.toml)
+```
+~/.config/bwget/config.toml
 ```
 
-Example options:
+Customize settings like proxies, retries, timeouts, and chunk sizes directly:
 
 ```toml
 [network]
-# proxy = "http://user:pass@proxy:8080"
 user_agent = "bwget/0.4.0 (Python/3.x)"
 max_retries = 3
 base_backoff = 1.0
@@ -122,10 +149,18 @@ chunk_size_kb = 256
 hash_chunk_size_mb = 1
 ```
 
-## Contributing
+---
 
-Feel free to open issues or pull requests.
+## 🤝 Contributing
 
-## Author
+Your contributions are welcome! Feel free to open issues, request features, or submit pull requests to help improve bwget.
 
-Robin Snyders <robin@snyders.xyz>
+---
+
+## 🙋 Author
+
+Crafted with care by **Robin Snyders** ([robin@snyders.xyz](mailto:robin@snyders.xyz))
+
+---
+
+Enjoy using **bwget**—making downloading simpler, faster, and better!
