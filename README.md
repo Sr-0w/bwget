@@ -89,6 +89,9 @@ bwget --sha256 0123456789abcdef... https://example.com/app.tar.gz
 # Use an HTTP proxy
 bwget --proxy http://proxy.local:3128 https://example.com/data.zip
 
+# Custom User-Agent
+bwget -U "MyDownloader/1.0" https://example.com/file.zip
+
 # Show version
 bwget --version
 ```
