@@ -1,6 +1,7 @@
 # bwget
 
-**Better Wget** in Python: a tiny, single-file replacement for the parts of GNU wget most people actually use.
+**Better Wget** in Python – a tiny, single-file replacement for the most commonly used parts of GNU wget.
+Packages are available for Arch Linux via the AUR and for Fedora through COPR.
 
 ![bwget demo](https://pouch.jumpshare.com/preview/P97VWVAAv80eYgIit58iPW7Z9p5B2Gii1s3TPaJwO_8I-1Ix-3go_5QyWkuWnjxU2A4Rb8yKhJS2MLfj-2Drjw5QoTvJ8_fU7PXfI7G3wVM)
 
@@ -24,9 +25,9 @@
 * [requests](https://pypi.org/project/requests/)
 * [rich](https://pypi.org/project/rich/)
 * [libtorrent](https://pypi.org/project/libtorrent/) (for torrent downloads)
-* [tomli](https://pypi.org/project/tomli/) (for Python < 3.11) or built‑in `tomllib`
+* [tomli](https://pypi.org/project/tomli/) (for Python < 3.11) or Python’s built-in `tomllib`
 
-Install via pip:
+Install dependencies via pip:
 
 ```bash
 pip install requests rich libtorrent tomli
@@ -51,9 +52,9 @@ To install the manpage:
 sudo install -Dm644 bwget.1 /usr/share/man/man1/bwget.1
 ```
 
-### From AUR (Arch Linux)
+### Arch Linux (AUR)
 
-bwget is packaged in the Arch User Repository. You can install with an AUR helper:
+bwget is available in the [Arch User Repository](https://aur.archlinux.org/packages/bwget). Install it with an AUR helper:
 
 ```bash
 yay -S bwget
@@ -70,6 +71,15 @@ makepkg -si
 ```
 
 This will build and install `/usr/bin/bwget`, the manpage, and completions.
+### Fedora / EPEL (COPR)
+
+The package is also available from [COPR](https://copr.fedorainfracloud.org/coprs/srobin/bwget/):
+
+```bash
+sudo dnf copr enable srobin/bwget
+sudo dnf install bwget
+```
+
 
 ## Usage
 
