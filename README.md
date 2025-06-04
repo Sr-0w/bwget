@@ -14,6 +14,8 @@
 * 🛡️ **SHA-256 Verification:** Automatically verifies file integrity via SHA-256.
 * 🔄 **Automatic Retries:** Smart retries with exponential backoff for robust downloads.
 * 📃 **Batch Downloads:** Handle multiple downloads effortlessly from a list file (`urls.txt`).
+* 🌀 **Bandwidth Throttling:** Limit download rates with `--limit-rate` or via configuration.
+* 🌱 **Torrent Controls:** Restrict peer count with `--max-seeds` and configurable listen ports.
 * 🛠️ **Configurable:** Customize behavior easily through a convenient TOML config file.
 
 ---
@@ -115,6 +117,18 @@ Using an HTTP proxy:
 bwget --proxy http://proxy.local:3128 https://example.com/data.zip
 ```
 
+Limit download rate:
+
+```bash
+bwget --limit-rate 500 https://example.com/large.iso
+```
+
+Limit torrent peers:
+
+```bash
+bwget --max-seeds 20 https://example.com/file.torrent
+```
+
 Disable TLS verification:
 
 ```bash
@@ -170,11 +184,13 @@ behavior and torrent options directly:
 
 ```toml
 [network]
+# proxy = "http://user:pass@yourproxy.example.com:8080"
 user_agent = "bwget/0.4.0 (Python/3.x)"
 max_retries = 3
 base_backoff = 1.0
 request_timeout = 15
 stream_timeout = 30
+# verify TLS certificates (set to false to disable verification)
 verify_tls = true
 
 [download]
