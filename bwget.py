@@ -377,8 +377,15 @@ def download_torrent(url: str, out_dir: Path, expected_sha256: str | None = None
     status = handle.status()
     torrent_name = status.name or getattr(handle, "name", lambda: "torrent")()
     console.print(
-        f"[cyan]Downloading [bold]{escape(torrent_name)}[/] from {status.num_seeds} seeds - {status.num_peers} peers[/]"
+        f"[cyan]Downloading [bold]{escape(torrent_name)}[/]…[/]"
     )
+
+    while not handle.has_metadata():
+        time.sleep(0.5)
+
+    info = handle.torrent_file() if hasattr(handle, "torrent_file") else handle.get_torrent_info()
+    total_bytes = info.total_size()
+    status = handle.status()
 
     cols = [
         TextColumn("[green]{task.description}[/] [orange1]{task.percentage:>6.2f}%[/]"),
@@ -386,16 +393,16 @@ def download_torrent(url: str, out_dir: Path, expected_sha256: str | None = None
         DownloadColumn(True),
         TransferSpeedColumn(),
         TimeRemainingColumn(),
-        TextColumn("{task.fields[seeds]} seeds - {task.fields[peers]} peers"),
+        TextColumn("[orange1]{task.fields[seeds]} seeds - {task.fields[peers]} peers[/]"),
     ]
 
     with Progress(*cols, console=console, transient=True) as progress:
-        task_id = progress.add_task("Progress", total=100.0, seeds=status.num_seeds, peers=status.num_peers)
+        task_id = progress.add_task("Progress", total=total_bytes, seeds=status.num_seeds, peers=status.num_peers, start=True)
         while not handle.status().is_seeding:
             s = handle.status()
-            progress.update(task_id, completed=s.progress * 100, seeds=s.num_seeds, peers=s.num_peers)
+            progress.update(task_id, completed=s.total_wanted_done, seeds=s.num_seeds, peers=s.num_peers)
             time.sleep(0.5)
-        progress.update(task_id, completed=100)
+        progress.update(task_id, completed=total_bytes)
 
     console.print("[green]✔ Torrent download complete[/]")
 
