@@ -4,10 +4,10 @@ bwget -- “Better Wget” in Python
 --------------------------------
 
 A tiny, single‑file replacement for the parts of GNU wget most people
-actually use: downloading one HTTP/HTTPS resource with a pretty progress
-bar, automatic filename selection, optional resume, TLS verification,
-automatic retries, optional SHA‑256 verification, and proxy support
-via CLI, config file, or environment variables.
+actually use: downloading one HTTP/HTTPS resource (or a single torrent)
+with a pretty progress bar, automatic filename selection, optional resume,
+TLS verification, automatic retries, optional SHA‑256 verification, and
+proxy support via CLI, config file, or environment variables.
 """
 
 from __future__ import annotations
@@ -55,6 +55,7 @@ import os
 import platform
 import re
 import time
+import tempfile
 from pathlib import Path
 from textwrap import shorten
 from urllib.parse import urlsplit, urlunsplit
@@ -85,7 +86,7 @@ except ImportError:
 # ---------------------------------------------------------------------------
 # Version & Initial Configuration
 # ---------------------------------------------------------------------------
-VERSION = "0.3.6"  # new minor version for spinner integration
+VERSION = "0.4.0"  # torrent support
 
 cfg = {
     "user_agent": f"bwget/{VERSION} (Python/{sys.version_info.major}.{sys.version_info.minor})",
@@ -300,6 +301,71 @@ def verify_sha256_with_progress(file_path: Path, expected_digest: str):
                 f"[red]⨯ Could not delete mismatched file {escape(str(file_path))}: {e}[/]"
             )
         sys.exit(2)
+
+
+def is_torrent(url: str) -> bool:
+    return url.startswith("magnet:") or url.lower().endswith(".torrent")
+
+
+def download_torrent(url: str, out_dir: Path) -> None:
+    """Download a single torrent or magnet link without seeding."""
+    global EARLY_PB
+    if EARLY_PB is not None:
+        EARLY_PB.stop()
+        EARLY_PB = None
+
+    try:
+        import libtorrent as lt
+    except ImportError:
+        console.print(
+            "[red]⨯ libtorrent module is required for torrent downloads.[/]")
+        sys.exit(3)
+
+    ses = lt.session()
+
+    if url.startswith("magnet:"):
+        atp = lt.parse_magnet_uri(url)
+        atp.save_path = str(out_dir)
+        handle = ses.add_torrent(atp)
+    else:
+        r = requests.get(
+            url,
+            timeout=cfg["request_timeout"],
+            headers={"User-Agent": cfg["user_agent"]},
+            proxies=cfg["final_proxies_dict"],
+        )
+        r.raise_for_status()
+        with tempfile.NamedTemporaryFile(delete=False) as tf:
+            tf.write(r.content)
+            temp_path = tf.name
+        info = lt.torrent_info(temp_path)
+        os.unlink(temp_path)
+        atp = lt.add_torrent_params()
+        atp.ti = info
+        atp.save_path = str(out_dir)
+        handle = ses.add_torrent(atp)
+
+    console.print(
+        f"[cyan]Downloading torrent to [bold]{escape(str(out_dir))}[/]…[/]")
+
+    cols = [
+        TextColumn("[green]{task.description}[/] [orange1]{task.percentage:>6.2f}%[/]"),
+        BarColumn(None),
+        DownloadColumn(True),
+        TransferSpeedColumn(),
+        TimeRemainingColumn(),
+    ]
+
+    with Progress(*cols, console=console, transient=True) as progress:
+        task_id = progress.add_task("Torrent", total=100.0)
+        while not handle.status().is_seeding:
+            s = handle.status()
+            progress.update(task_id, completed=s.progress * 100)
+            time.sleep(1)
+        progress.update(task_id, completed=100)
+
+    ses.remove_torrent(handle)
+    console.print("[green]✔ Torrent download complete[/]")
 
 
 def download(
@@ -572,14 +638,18 @@ def main() -> None:
         console.print(f"[red]⨯ Fetched SHA-256 invalid (len {len(expected_sha)}).[/]")
         expected_sha = None
 
-    initial_path = pick_initial_filename(ns.url, ns.output)
-    download(
-        ns.url,
-        initial_path,
-        ns.output is not None,
-        ns.resume,
-        expected_sha,
-    )
+    if is_torrent(ns.url):
+        out_dir = Path(ns.output).expanduser() if ns.output else Path('.')
+        download_torrent(ns.url, out_dir)
+    else:
+        initial_path = pick_initial_filename(ns.url, ns.output)
+        download(
+            ns.url,
+            initial_path,
+            ns.output is not None,
+            ns.resume,
+            expected_sha,
+        )
 
 
 if __name__ == "__main__":
