@@ -64,7 +64,7 @@ sudo install -Dm644 bwget.1 /usr/share/man/man1/bwget.1
 ```bash
 yay -S bwget
 or
-pary -S bwget
+paru -S bwget
 ```
 * **Fedora (COPR)**: [bwget](https://copr.fedorainfracloud.org/coprs/srobin/bwget/)
 ```bash
