@@ -377,7 +377,8 @@ def download_torrent(url: str, out_dir: Path, expected_sha256: str | None = None
     status = handle.status()
     torrent_name = status.name or getattr(handle, "name", lambda: "torrent")()
     console.print(
-        f"[cyan]Downloading [bold]{escape(torrent_name)}[/]…[/]")
+        f"[cyan]Downloading [bold]{escape(torrent_name)}[/] from "
+        f"{status.num_seeds} seeds - {status.num_peers} peers[/]")
 
     cols = [
         TextColumn("[green]{task.description}[/] [orange1]{task.percentage:>6.2f}%[/]"),
@@ -388,11 +389,10 @@ def download_torrent(url: str, out_dir: Path, expected_sha256: str | None = None
     ]
 
     with Progress(*cols, console=console, transient=True) as progress:
-        task_id = progress.add_task(torrent_name, total=100.0)
+        task_id = progress.add_task("Progress", total=100.0)
         while not handle.status().is_seeding:
             s = handle.status()
-            desc = f"{torrent_name} ({s.num_seeds} seeds, {s.num_peers} peers)"
-            progress.update(task_id, completed=s.progress * 100, description=desc)
+            progress.update(task_id, completed=s.progress * 100)
             time.sleep(1)
     progress.update(task_id, completed=100)
 
