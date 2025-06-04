@@ -546,7 +546,7 @@ def download(
             start_t, dl_sess = time.perf_counter(), 0
             with Progress(*cols, console=console, transient=True) as progress:
                 task_id = progress.add_task(
-                    "Progress" if mode == "wb" else "Res",
+                    "Progress" if mode == "wb" else "Progress",
                     total=total_prog,
                     completed=comp_prog,
                     start=(comp_prog < total_prog or not total_prog),
