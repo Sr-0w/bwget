@@ -1,6 +1,6 @@
 # bwget
 
-**Better Wget** in Python: a tiny, single-file replacement for the parts of GNU wget most people actually use.
+**Better Wget** in Python — a tiny single-file downloader with the essentials of GNU `wget`.
 
 ![bwget demo](https://pouch.jumpshare.com/preview/P97VWVAAv80eYgIit58iPW7Z9p5B2Gii1s3TPaJwO_8I-1Ix-3go_5QyWkuWnjxU2A4Rb8yKhJS2MLfj-2Drjw5QoTvJ8_fU7PXfI7G3wVM)
 
@@ -8,25 +8,25 @@
 
 ## Features
 
-* HTTP/HTTPS downloads with a clean progress bar ([Rich](https://github.com/Textualize/rich))
-* .torrent and magnet link support (single torrent at a time, no seeding)
-* Automatic filename selection (from URL or **Content-Disposition** header)
-* Resume support for partially downloaded files (HTTP range requests)
-* TLS verification (can be disabled with `--no-check-certificate`, insecure!) and proxy support (CLI, config file, or environment variables)
-* Automatic retries with exponential backoff
-* Optional SHA‑256 checksum verification (auto-fetch `<URL>.sha256`)
-* Batch downloads from a file (`-i urls.txt` or just `urls.txt`)
-* Configuration via TOML (`~/.config/bwget/config.toml`)
+- HTTP/HTTPS downloads with a Rich progress bar
+- `.torrent` and magnet link support (one torrent at a time, no seeding)
+- Automatic filename detection from the URL or `Content-Disposition`
+- Resume partially downloaded files
+- TLS verification (can be disabled with `--no-check-certificate`) and proxy support
+- Automatic retries with exponential backoff
+- Optional SHA‑256 verification (`<URL>.sha256` auto-fetch)
+- Batch downloads from a list (`-i urls.txt` or `urls.txt`)
+- TOML configuration file at `~/.config/bwget/config.toml`
 
 ## Requirements
 
-* Python 3.8+
-* [requests](https://pypi.org/project/requests/)
-* [rich](https://pypi.org/project/rich/)
-* [libtorrent](https://pypi.org/project/libtorrent/) (for torrent downloads)
-* [tomli](https://pypi.org/project/tomli/) (for Python < 3.11) or built‑in `tomllib`
+- Python 3.8 or newer
+- [requests](https://pypi.org/project/requests/)
+- [rich](https://pypi.org/project/rich/)
+- [libtorrent](https://pypi.org/project/libtorrent/) for torrent downloads
+- `tomli` on Python < 3.11, otherwise the built‑in `tomllib`
 
-Install via pip:
+Install dependencies with pip:
 
 ```bash
 pip install requests rich libtorrent tomli
@@ -34,9 +34,7 @@ pip install requests rich libtorrent tomli
 
 ## Installation
 
-### From GitHub
-
-Clone the repo and install into your `PATH`:
+### From source
 
 ```bash
 git clone https://github.com/Sr-0w/bwget.git
@@ -45,31 +43,24 @@ chmod +x bwget.py
 sudo mv bwget.py /usr/local/bin/bwget
 ```
 
-To install the manpage:
+Install the man page if you want:
 
 ```bash
 sudo install -Dm644 bwget.1 /usr/share/man/man1/bwget.1
 ```
 
-### From AUR (Arch Linux)
+### Packages
 
-bwget is packaged in the Arch User Repository. You can install with an AUR helper:
+- **AUR**: <https://aur.archlinux.org/packages/bwget>
+- **COPR**: <https://copr.fedorainfracloud.org/coprs/srobin/bwget/>
 
-```bash
-yay -S bwget
-# or
-paru -S bwget
-```
-
-Or manually:
+Arch users can also build the package manually:
 
 ```bash
 git clone https://aur.archlinux.org/bwget.git
 cd bwget
 makepkg -si
 ```
-
-This will build and install `/usr/bin/bwget`, the manpage, and completions.
 
 ## Usage
 
@@ -81,10 +72,10 @@ bwget https://example.com/file.tar.gz
 bwget https://example.com/file.torrent
 bwget "magnet:?xt=urn:btih:..."
 
-# Force a **fresh** download (disable resume)
+# Force a fresh download (ignore resume data)
 bwget -c https://example.com/large.iso
 
-# Download with SHA-256 verification (HTTP or single-file torrent)
+# SHA‑256 verification (HTTP or single-file torrent)
 bwget --sha256 0123456789abcdef... https://example.com/app.tar.gz
 
 # Use an HTTP proxy
@@ -92,12 +83,9 @@ bwget --proxy http://proxy.local:3128 https://example.com/data.zip
 
 # Disable TLS verification (insecure)
 bwget --no-check-certificate https://example.com/file.tar.gz
-# This makes the connection vulnerable to man-in-the-middle attacks.
 
 # Download many URLs from a file
 bwget -i urls.txt
-# or simply
-bwget urls.txt
 
 # Custom User-Agent
 bwget -U "MyDownloader/1.0" https://example.com/file.zip
@@ -106,19 +94,18 @@ bwget -U "MyDownloader/1.0" https://example.com/file.zip
 bwget --version
 ```
 
-Checksum verification works for regular HTTP downloads and for single-file
-torrents when a `--sha256` digest is provided.
+Checksum verification works for regular HTTP downloads and for single-file torrents when a `--sha256` digest is provided.
 
 ## Configuration
 
-On first run, bwget creates a sample config at:
+On first run bwget creates a sample config at:
 
 ```text
 $XDG_CONFIG_HOME/bwget/config.toml
 # (defaults to ~/.config/bwget/config.toml)
 ```
 
-Edit it to tweak defaults:
+Example options:
 
 ```toml
 [network]
@@ -137,8 +124,8 @@ hash_chunk_size_mb = 1
 
 ## Contributing
 
-Pull requests and issues welcome!
+Feel free to open issues or pull requests.
 
 ## Author
 
-Robin Snyders ‹[robin@snyders.xyz](mailto:robin@snyders.xyz)›
+Robin Snyders <robin@snyders.xyz>
