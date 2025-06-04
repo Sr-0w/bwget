@@ -380,7 +380,8 @@ def download_torrent(url: str, out_dir: Path, expected_sha256: str | None = None
         f"[cyan]Downloading [bold]{escape(torrent_name)}[/]…[/]"
     )
 
-    while not handle.has_metadata():
+    # has_metadata() is deprecated in modern libtorrent; use torrent_status
+    while not handle.status().has_metadata:
         time.sleep(0.5)
 
     info = handle.torrent_file() if hasattr(handle, "torrent_file") else handle.get_torrent_info()
