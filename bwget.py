@@ -307,8 +307,12 @@ def is_torrent(url: str) -> bool:
     return url.startswith("magnet:") or url.lower().endswith(".torrent")
 
 
-def download_torrent(url: str, out_dir: Path) -> None:
-    """Download a single torrent or magnet link without seeding."""
+def download_torrent(url: str, out_dir: Path, expected_sha256: str | None = None) -> None:
+    """Download a single torrent or magnet link without seeding.
+
+    If ``expected_sha256`` is provided and the torrent contains exactly one
+    file, its SHA‑256 will be verified after the download completes.
+    """
     global EARLY_PB
     if EARLY_PB is not None:
         EARLY_PB.stop()
@@ -391,6 +395,25 @@ def download_torrent(url: str, out_dir: Path) -> None:
 
     ses.remove_torrent(handle)
     console.print("[green]✔ Torrent download complete[/]")
+
+    if expected_sha256:
+        try:
+            info = handle.get_torrent_info() if hasattr(handle, "get_torrent_info") else handle.torrent_file()
+            files = info.files()
+            num_files = files.num_files() if hasattr(files, "num_files") else files.num_files
+            if num_files == 1:
+                rel_path = files.file_path(0)
+                save_root = Path(handle.save_path()) if hasattr(handle, "save_path") else Path(handle.status().save_path)
+                file_path = save_root / rel_path
+                if file_path.is_file():
+                    verify_sha256_with_progress(file_path, expected_sha256)
+                else:
+                    console.print(
+                        f"[yellow]⚠ Expected file {escape(str(file_path))} not found for checksum.[/]")
+            else:
+                console.print("[yellow]⚠ Cannot verify SHA-256 for multi-file torrent.[/]")
+        except Exception as e:
+            console.print(f"[yellow]⚠ SHA-256 verification skipped: {e}[/]")
 
 
 def download(
@@ -665,7 +688,7 @@ def main() -> None:
 
     if is_torrent(ns.url):
         out_dir = Path(ns.output).expanduser() if ns.output else Path('.')
-        download_torrent(ns.url, out_dir)
+        download_torrent(ns.url, out_dir, expected_sha)
     else:
         initial_path = pick_initial_filename(ns.url, ns.output)
         download(

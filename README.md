@@ -83,7 +83,7 @@ bwget "magnet:?xt=urn:btih:..."
 # Force a **fresh** download (disable resume)
 bwget -c https://example.com/large.iso
 
-# Download with SHA-256 verification
+# Download with SHA-256 verification (HTTP or single-file torrent)
 bwget --sha256 0123456789abcdef... https://example.com/app.tar.gz
 
 # Use an HTTP proxy
@@ -92,6 +92,9 @@ bwget --proxy http://proxy.local:3128 https://example.com/data.zip
 # Show version
 bwget --version
 ```
+
+Checksum verification works for regular HTTP downloads and for single-file
+torrents when a `--sha256` digest is provided.
 
 ## Configuration
 
