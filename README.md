@@ -146,9 +146,11 @@ bwget --version
 | `-o`, `--output FILE` | Save the download to `FILE` instead of the remote filename |
 | `-c`, `--cancel-resume` | Disable resume and start the download from scratch |
 | `-q`, `--quiet` | Suppress non-error output |
+| `--limit-rate KBPS` | Limit download bandwidth in KiB/s |
 | `-i`, `--input FILE` | Read URLs from `FILE` (one per line) |
 | `--sha256 DIGEST` | Verify download against the given SHA-256 digest |
 | `--proxy PROXY_URL` | Use the specified HTTP/HTTPS proxy |
+| `--max-seeds N` | Limit active torrent peers |
 | `-U`, `--user-agent UA` | Override the User-Agent header |
 | `--no-check-certificate` | Disable TLS certificate verification (insecure) |
 | `--version` | Display version information and exit |
@@ -179,9 +181,11 @@ verify_tls = true
 chunk_size_kb = 256
 hash_chunk_size_mb = 1
 resume_default = true
+bandwidth_limit_kbps = 0
 
 [torrent]
 listen_interfaces = "0.0.0.0:6881-6891"
+max_seeds = 0
 ```
 
 ---

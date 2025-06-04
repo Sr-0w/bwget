@@ -59,6 +59,7 @@ import tempfile
 from pathlib import Path
 from textwrap import shorten
 from urllib.parse import urlsplit, urlunsplit
+import shutil
 
 import requests
 from requests.exceptions import (
@@ -97,6 +98,8 @@ cfg = {
     "verify_tls": True,
     "resume_default": True,
     "torrent_listen_interfaces": "0.0.0.0:6881-6891",
+    "bandwidth_limit": 0,
+    "torrent_max_seeds": 0,
 }
 
 TRANSIENT_STATUS = {500, 502, 503, 504}
@@ -135,9 +138,11 @@ request_timeout = {cfg['request_timeout']}
     chunk_size_kb = {cfg['chunk_size'] // 1024}
     hash_chunk_size_mb = {cfg['hash_chunk_size'] // (1024 * 1024)}
     resume_default = true
+    bandwidth_limit_kbps = 0
 
 [torrent]
     listen_interfaces = "{cfg['torrent_listen_interfaces']}"
+    max_seeds = 0
 """
     try:
         config_path.parent.mkdir(parents=True, exist_ok=True)
@@ -189,7 +194,9 @@ def load_and_apply_config():
         "chunk_size": int(dl_conf.get("chunk_size_kb", cfg["chunk_size"] // 1024)) * 1024,
         "hash_chunk_size": int(dl_conf.get("hash_chunk_size_mb", cfg["hash_chunk_size"] // (1024*1024))) * 1024 * 1024,
         "resume_default": bool(dl_conf.get("resume_default", cfg["resume_default"])),
+        "bandwidth_limit": int(dl_conf.get("bandwidth_limit_kbps", cfg["bandwidth_limit"] // 1024)) * 1024,
         "torrent_listen_interfaces": torrent_conf.get("listen_interfaces", cfg["torrent_listen_interfaces"]),
+        "torrent_max_seeds": int(torrent_conf.get("max_seeds", cfg["torrent_max_seeds"])),
     })
 
 # ---------------------------------------------------------------------------
@@ -325,6 +332,22 @@ def verify_sha256_with_progress(file_path: Path, expected_digest: str):
         sys.exit(2)
 
 
+def ensure_disk_space(path: Path, required_bytes: int) -> None:
+    """Abort if ``path``'s filesystem lacks ``required_bytes`` free."""
+    try:
+        usage = shutil.disk_usage(path.parent)
+        if usage.free < required_bytes:
+            need_mb = required_bytes / (1024 ** 2)
+            free_mb = usage.free / (1024 ** 2)
+            console.print(
+                f"[red]⨯ Not enough disk space for {escape(str(path))}. "
+                f"Need {need_mb:.1f} MiB, available {free_mb:.1f} MiB[/]"
+            )
+            sys.exit(1)
+    except Exception as e:
+        console.print(f"[yellow]⚠ Could not check disk space: {e}[/]")
+
+
 def is_torrent(url: str) -> bool:
     return url.startswith("magnet:") or url.lower().endswith(".torrent")
 
@@ -367,6 +390,11 @@ def download_torrent(url: str, out_dir: Path, expected_sha256: str | None = None
     params = lt.add_torrent_params() if use_modern_api else {"save_path": str(out_dir)}
     if use_modern_api:
         params.save_path = str(out_dir)
+    if cfg["torrent_max_seeds"] > 0:
+        if use_modern_api and hasattr(params, "max_connections"):
+            params.max_connections = cfg["torrent_max_seeds"]
+        elif not use_modern_api:
+            params["max_connections"] = cfg["torrent_max_seeds"]
 
     if url.startswith("magnet:"):
         if use_modern_api and hasattr(lt, "add_magnet_uri"):
@@ -406,6 +434,12 @@ def download_torrent(url: str, out_dir: Path, expected_sha256: str | None = None
         else:
             params["ti"] = info
         handle = ses.add_torrent(params)
+
+    if cfg["torrent_max_seeds"] > 0 and hasattr(handle, "set_max_connections"):
+        try:
+            handle.set_max_connections(cfg["torrent_max_seeds"])
+        except Exception:
+            pass
 
     if EARLY_PB is not None:
         for task in EARLY_PB.tasks:
@@ -571,6 +605,10 @@ def download(
             )
             comp_prog = downloaded_initial_size if mode == "ab" else 0
 
+            required_size = total_prog if mode == "wb" else max(0, total_prog - downloaded_initial_size)
+            if required_size:
+                ensure_disk_space(final_out_path, required_size)
+
             final_out_path.parent.mkdir(parents=True, exist_ok=True)
             host = urlsplit(r.url).hostname or urlsplit(url).hostname or "server"
             console.print(
@@ -597,6 +635,11 @@ def download(
                         if chunk:
                             if (not progress.tasks[task_id].started) and total_prog:
                                 progress.start_task(task_id)
+                            if cfg["bandwidth_limit"] > 0:
+                                expected = dl_sess / cfg["bandwidth_limit"]
+                                elapsed_bw = time.perf_counter() - start_t
+                                if expected > elapsed_bw:
+                                    time.sleep(expected - elapsed_bw)
                             f.write(chunk)
                             dl_sess += len(chunk)
                             progress.update(task_id, advance=len(chunk))
@@ -697,6 +740,8 @@ def main() -> None:
     )
     parser.add_argument("-q", "--quiet", action="store_true",
                         help="suppress non-error output (hides progress bar)")
+    parser.add_argument("--limit-rate", metavar="KBPS", type=int,
+                        help="limit download bandwidth (KiB/s)")
     parser.add_argument("--sha256", metavar="HEXDIGEST",
                         help="expected SHA-256 (64 hex chars). "
                              "Auto-fetches <URL>.sha256 if not given.")
@@ -704,6 +749,8 @@ def main() -> None:
     parser.add_argument("--proxy", metavar="PROXY_URL",
                         help="HTTP/HTTPS proxy URL "
                              "(e.g., http://user:pass@host:port)")
+    parser.add_argument("--max-seeds", metavar="N", type=int,
+                        help="limit active torrent peers")
     parser.add_argument("-U", "--user-agent", metavar="UA",
                         help="override User-Agent header")
     parser.add_argument(
@@ -728,6 +775,12 @@ def main() -> None:
 
     if ns.user_agent:
         cfg["user_agent"] = ns.user_agent
+
+    if ns.limit_rate is not None:
+        cfg["bandwidth_limit"] = max(0, ns.limit_rate) * 1024
+
+    if ns.max_seeds is not None:
+        cfg["torrent_max_seeds"] = max(0, ns.max_seeds)
 
 
     proxy_url_str_to_use = ns.proxy or cfg["proxy_url_config"]
