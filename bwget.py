@@ -323,10 +323,16 @@ def download_torrent(url: str, out_dir: Path) -> None:
 
     params = {"save_path": str(out_dir)}
     ses = lt.session()
-    ses.listen_on(6881, 6891)
+    if hasattr(lt, "settings_pack"):
+        pack = lt.settings_pack()
+        pack.listen_interfaces = "0.0.0.0:6881-6891"
+        ses.apply_settings(pack)
+    else:
+        ses.listen_on(6881, 6891)
 
     if url.startswith("magnet:"):
-        handle = lt.add_magnet_uri(ses, url, params)
+        params["url"] = url
+        handle = ses.add_torrent(params)
     else:
         r = requests.get(
             url,
@@ -356,7 +362,7 @@ def download_torrent(url: str, out_dir: Path) -> None:
 
     with Progress(*cols, console=console, transient=True) as progress:
         task_id = progress.add_task("Torrent", total=100.0)
-        while not handle.is_seed():
+        while not handle.status().is_seeding:
             s = handle.status()
             progress.update(task_id, completed=s.progress * 100)
             time.sleep(1)
