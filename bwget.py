@@ -321,17 +321,32 @@ def download_torrent(url: str, out_dir: Path) -> None:
             "[red]⨯ libtorrent module is required for torrent downloads.[/]")
         sys.exit(3)
 
-    params = {"save_path": str(out_dir)}
     ses = lt.session()
     if hasattr(lt, "settings_pack"):
         pack = lt.settings_pack()
         pack.listen_interfaces = "0.0.0.0:6881-6891"
         ses.apply_settings(pack)
     else:
-        ses.listen_on(6881, 6891)
+        if hasattr(ses, "listen_on"):
+            ses.listen_on(6881, 6891)
+
+    use_modern_api = hasattr(lt, "add_torrent_params")
+    params = lt.add_torrent_params() if use_modern_api else {"save_path": str(out_dir)}
+    if use_modern_api:
+        params.save_path = str(out_dir)
+    else:
+        params["save_path"] = str(out_dir)
 
     if url.startswith("magnet:"):
-        params["url"] = url
+        if use_modern_api:
+            parse = getattr(lt, "parse_magnet_uri", None)
+            if parse is not None:
+                params = parse(url)
+                params.save_path = str(out_dir)
+            else:
+                params.url = url
+        else:
+            params["url"] = url
         handle = ses.add_torrent(params)
     else:
         r = requests.get(
@@ -346,7 +361,10 @@ def download_torrent(url: str, out_dir: Path) -> None:
             temp_path = tf.name
         info = lt.torrent_info(temp_path)
         os.unlink(temp_path)
-        params["ti"] = info
+        if use_modern_api:
+            params.ti = info
+        else:
+            params["ti"] = info
         handle = ses.add_torrent(params)
 
     console.print(
