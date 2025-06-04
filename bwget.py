@@ -496,7 +496,7 @@ def download(
 # CLI entry-point
 # ---------------------------------------------------------------------------
 def main() -> None:
-    global cfg
+    global cfg, EARLY_PB
 
     load_and_apply_config()
 
@@ -532,7 +532,15 @@ def main() -> None:
         sys.exit(1)
     ns = parser.parse_args()
 
-    global EARLY_PB
+    parsed_scheme = urlsplit(ns.url).scheme
+    if parsed_scheme and parsed_scheme.lower() not in {"http", "https"}:
+        if EARLY_PB:
+            EARLY_PB.stop()
+            EARLY_PB = None
+        console.print(
+            f"[red]⨯ Unsupported URL scheme: {parsed_scheme}. Only HTTP/HTTPS are supported.[/]")
+        sys.exit(2)
+
     if ns.quiet:
         if EARLY_PB:
             EARLY_PB.stop()
