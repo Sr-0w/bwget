@@ -12,9 +12,9 @@ proxy support via CLI, config file, or environment variables.
 
 from __future__ import annotations
 
-# ──────────────────────────────────────────
-# absolutely-minimal imports for early bar
-# ──────────────────────────────────────────
+# ---------------------------------------------------------------------------
+# Minimal imports used for the early progress bar
+# ---------------------------------------------------------------------------
 import sys
 from rich.console import Console
 from rich.progress import (
@@ -32,7 +32,7 @@ cols = [
     TimeRemainingColumn(),
 ]
 
-# Display the early progress bar only when a download is likely to occur.
+# Display the early progress bar only when a download is likely to occur
 show_early_bar = (
     len(sys.argv) > 1
     and not any(arg in {"-h", "--help", "--version"} for arg in sys.argv[1:])
@@ -46,9 +46,9 @@ if show_early_bar:
 else:
     EARLY_PB = None
 
-# ──────────────────────────────────────────
-# rest of the “heavy” imports come afterwards
-# ──────────────────────────────────────────
+# ---------------------------------------------------------------------------
+# Remaining imports
+# ---------------------------------------------------------------------------
 import argparse
 import hashlib
 import os
@@ -72,7 +72,9 @@ from rich.progress import (
 from rich.markup import escape
 
 
-# --- TOML library import ---
+# ---------------------------------------------------------------------------
+# TOML library import
+# ---------------------------------------------------------------------------
 try:
     import tomllib
     tomllib_present = True
@@ -87,7 +89,7 @@ except ImportError:
 # ---------------------------------------------------------------------------
 # Version & Initial Configuration
 # ---------------------------------------------------------------------------
-VERSION = "0.4.0"  # torrent support
+VERSION = "0.4.0"
 
 cfg = {
     "user_agent": f"bwget/{VERSION} (Python/{sys.version_info.major}.{sys.version_info.minor})",
@@ -261,8 +263,7 @@ def _open_stream(url: str, stream_headers: dict[str, str]) -> requests.Response:
     while True:
         attempt += 1
         try:
-            # The connection progress bar is now started earlier in download(),
-            # so we simply open the stream here.
+            # Connection progress starts earlier in download(); just open here
             r = requests.get(
                 url,
                 stream=True,
@@ -519,7 +520,7 @@ def download(
 
     final_out_path, http_headers = initial_out_path, {"User-Agent": cfg["user_agent"]}
 
-    # If the early placeholder bar is running, update its label
+    # Update placeholder progress bar while connecting
     global EARLY_PB
     if EARLY_PB is not None:
         for task in EARLY_PB.tasks:
@@ -561,7 +562,7 @@ def download(
             elif server_supports_resume or downloaded_initial_size > 0:
                 http_headers["Range"] = f"bytes={downloaded_initial_size}-"
                 mode = "ab"
-                # print human-readable resume point
+                # Print human-readable resume point
                 resumed_mb = downloaded_initial_size / (1024 ** 2)
                 resumed_str = f"{resumed_mb:.1f} MB"
                 total_str = ""
@@ -580,7 +581,7 @@ def download(
     try:
         with _open_stream(url, stream_headers=http_headers) as r:
 
-            # Stop the early placeholder bar — real progress starts now
+            # Stop placeholder progress bar; real progress begins
             if EARLY_PB:
                 EARLY_PB.stop()
                 EARLY_PB = None
@@ -644,7 +645,7 @@ def download(
                             dl_sess += len(chunk)
                             progress.update(task_id, advance=len(chunk))
 
-            # ── post-download summary ─────────────────────────────────────────
+            # Post-download summary
             elapsed = time.perf_counter() - start_t or 1e-9
             f_size  = final_out_path.stat().st_size if final_out_path.exists() else 0
             mb      = f_size / (1 << 20)
@@ -729,8 +730,7 @@ def main() -> None:
     )
     parser.add_argument("-o", "--output", metavar="FILE",
                         help="explicit output filename/path")
-    # Default is now to *resume* automatically.
-    # Supplying -c / --continue will *disable* resuming and start fresh.
+    # Downloads resume by default; use -c/--cancel-resume to start fresh
     parser.add_argument(
         "-c", "--cancel-resume",
         dest="resume",

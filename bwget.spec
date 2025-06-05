@@ -32,7 +32,7 @@ retries and SHA-256 verification.
 %install
 # Install script
 install -Dm0755 bwget.py %{buildroot}%{_bindir}/bwget
-# Install man page that’s already inside the tarball
+# Install man page
 install -Dm0644 bwget.1 %{buildroot}%{_mandir}/man1/bwget.1
 
 %files

@@ -1,4 +1,4 @@
-# Maintainer: Your Name <you@example.com>
+# Maintainer: Robin Snyders <robin@snyders.xyz>
 pkgname=bwget
 pkgver=0.4.0
 pkgrel=1
@@ -19,10 +19,10 @@ prepare() {
 }
 
 package() {
-  # script
+  # Install script
   install -Dm755 "bwget.py" "$pkgdir/usr/bin/bwget"
 
-  # manpage
+  # Install man page
   install -Dm644 bwget.1 "$pkgdir/usr/share/man/man1/bwget.1"
 
 }
