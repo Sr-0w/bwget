@@ -10,8 +10,8 @@ depends=('python' 'python-requests' 'python-rich' 'python-libtorrent' 'python-to
 source=("bwget.py"
         "bwget.1")
 sha256sums=(
-  '2a7c2904cf096999601068b6cf40b4daffde76c25e7f592184945433863015f0'
-  '5589b53c6d3ed396a37ee7b19f49b78387e01606698fa3fd35d726fb304cd7ce'
+  'bee8bac671b028cc3b293f4e870fd4dbf536a18bc137fcddd37b5c806f5f03e9'
+  '42385ac8e16d52fb05c727e6445db8bd1b7f65f4de03936febe812ec11bac2e8'
 )
 
 prepare() {
