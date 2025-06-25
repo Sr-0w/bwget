@@ -56,6 +56,7 @@ import platform
 import re
 import time
 import tempfile
+import warnings
 from pathlib import Path
 from textwrap import shorten
 from urllib.parse import urlsplit, urlunsplit
@@ -64,6 +65,7 @@ import shutil
 import requests
 from requests.exceptions import (
     ConnectionError, HTTPError, RequestException, Timeout, ChunkedEncodingError,
+    ProxyError, SSLError
 )
 from rich.console import Console
 from rich.progress import (
@@ -202,6 +204,102 @@ def load_and_apply_config():
     })
 
 # ---------------------------------------------------------------------------
+# Error Message Helpers
+# ---------------------------------------------------------------------------
+
+def format_friendly_error(exc: Exception, url: str = "") -> str:
+    """Convert technical exceptions to user-friendly error messages."""
+    exc_str = str(exc).lower()
+    
+    # Check for URL validation errors first
+    if "no scheme supplied" in exc_str or ("invalid url" in exc_str and "scheme" in exc_str):
+        return "Invalid URL (missing http:// or https://)"
+    
+    # Check for SSL errors first (they're often wrapped in ConnectionError)
+    if "certificate verify failed" in exc_str or "ssl" in exc_str:
+        if "certificate verify failed" in exc_str:
+            return "SSL certificate verification failed (use --no-check-certificate to bypass)"
+        else:
+            return "SSL/TLS connection error"
+    
+    # Check for proxy errors before general connection errors
+    if isinstance(exc, ProxyError) or "proxy" in exc_str:
+        if "Failed to resolve" in str(exc):
+            return "Cannot connect to proxy server (proxy not found)"
+        else:
+            return "Proxy connection failed"
+    
+    if isinstance(exc, ConnectionError):
+        if "Failed to resolve" in str(exc) or "Name or service not known" in str(exc):
+            domain = urlsplit(url).hostname if url else "domain"
+            return f"Cannot connect to {domain} (domain not found)"
+        elif "Connection refused" in str(exc):
+            return "Connection refused by server"
+        elif "timed out" in exc_str:
+            return "Connection timed out"
+        else:
+            return "Network connection failed"
+    
+    
+    elif isinstance(exc, SSLError) or "certificate verify failed" in str(exc).lower() or "ssl" in str(exc).lower():
+        if "certificate verify failed" in str(exc).lower():
+            return "SSL certificate verification failed (use --no-check-certificate to bypass)"
+        elif "ssl" in str(exc).lower():
+            return "SSL/TLS connection error"
+        else:
+            return "Secure connection failed"
+    
+    elif isinstance(exc, HTTPError) or "404" in exc_str or "403" in exc_str or "401" in exc_str or "500" in exc_str:
+        # Try to extract status code from exception
+        status_code = None
+        if hasattr(exc, 'response') and exc.response:
+            status_code = exc.response.status_code
+        elif "404" in exc_str:
+            status_code = 404
+        elif "403" in exc_str:
+            status_code = 403
+        elif "401" in exc_str:
+            status_code = 401
+        elif "500" in exc_str:
+            status_code = 500
+        
+        if status_code:
+            if status_code == 404:
+                return "File not found (404)"
+            elif status_code == 403:
+                return "Access forbidden (403)"
+            elif status_code == 401:
+                return "Authentication required (401)"
+            elif status_code in (500, 502, 503, 504):
+                return f"Server error ({status_code})"
+            else:
+                return f"HTTP error ({status_code})"
+        else:
+            return "HTTP request failed"
+    
+    elif isinstance(exc, Timeout):
+        return "Request timed out"
+    
+    elif isinstance(exc, PermissionError):
+        return "Permission denied (cannot write to destination)"
+    
+    elif isinstance(exc, FileNotFoundError):
+        return "File or directory not found"
+    
+    elif isinstance(exc, OSError):
+        if exc.errno == 28:  # ENOSPC
+            return "No space left on device"
+        elif exc.errno == 13:  # EACCES
+            return "Permission denied"
+        elif "no scheme supplied" in exc_str:
+            return "Invalid URL (missing http:// or https://)"
+        else:
+            return f"System error: {exc.strerror or str(exc)}"
+    
+    # Fallback for unknown exceptions
+    return f"Unexpected error: {str(exc)}"
+
+# ---------------------------------------------------------------------------
 # Helpers & Core Logic
 # ---------------------------------------------------------------------------
 
@@ -229,7 +327,8 @@ def request_head(url: str, headers: dict) -> requests.Response | None:
             verify=cfg["verify_tls"],
         )
     except RequestException as e:
-        console.print(f"[yellow]ⓘ HEAD request failed for {shorten(url, 70)}: {e}[/]", highlight=True)
+        friendly_msg = format_friendly_error(e, url)
+        console.print(f"[yellow]ⓘ HEAD request failed: {friendly_msg}[/]")
         return None
 
 
@@ -277,8 +376,9 @@ def _open_stream(url: str, stream_headers: dict[str, str]) -> requests.Response:
 
         except HTTPError as exc:
             if exc.response.status_code in TRANSIENT_STATUS and attempt < max_r:
+                friendly_msg = format_friendly_error(exc)
                 console.print(
-                    f"[yellow]⚠ Att {attempt}/{max_r} (HTTP {exc.response.status_code}):[/] {exc.response.reason}. Retry in {backoff:.1f}s…"
+                    f"[yellow]⚠ Att {attempt}/{max_r}:[/] {friendly_msg}. Retry in {backoff:.1f}s…"
                 )
                 time.sleep(backoff)
                 backoff *= 2
@@ -287,8 +387,9 @@ def _open_stream(url: str, stream_headers: dict[str, str]) -> requests.Response:
         except TRANSIENT_EXCEPTIONS as exc:
             if attempt >= max_r:
                 raise
+            friendly_msg = format_friendly_error(exc, url)
             console.print(
-                f"[yellow]⚠ Att {attempt}/{max_r}:[/] {type(exc).__name__}. Retry in {backoff:.1f}s…"
+                f"[yellow]⚠ Att {attempt}/{max_r}:[/] {friendly_msg}. Retry in {backoff:.1f}s…"
             )
             time.sleep(backoff)
             backoff *= 2
@@ -682,7 +783,8 @@ def download(
         sys.exit(130)
 
     except RequestException as exc:
-        console.print(f"[red]⨯ Download failed:[/] {exc}")
+        friendly_msg = format_friendly_error(exc, url)
+        console.print(f"[red]⨯ Download failed:[/] {friendly_msg}")
         if EARLY_PB:
             EARLY_PB.stop()
             EARLY_PB = None
@@ -696,13 +798,23 @@ def download(
                 else:
                     final_out_path.unlink(missing_ok=True)
             except OSError as e:
+                friendly_msg = format_friendly_error(e)
                 console.print(
-                    f"[red]⨯ Could not delete: {escape(str(final_out_path))}: {e}[/]"
+                    f"[red]⨯ Could not delete {escape(str(final_out_path))}:[/] {friendly_msg}"
                 )
         sys.exit(1)
 
+    except (PermissionError, OSError) as e:
+        friendly_msg = format_friendly_error(e)
+        console.print(f"[red]⨯ {friendly_msg}[/]")
+        if EARLY_PB:
+            EARLY_PB.stop()
+            EARLY_PB = None
+        sys.exit(1)
+    
     except Exception as e:
-        console.print(f"[bold red]Unexpected error: {type(e).__name__}: {e}[/]")
+        friendly_msg = format_friendly_error(e)
+        console.print(f"[red]⨯ {friendly_msg}[/]")
         if EARLY_PB:
             EARLY_PB.stop()
             EARLY_PB = None
@@ -766,6 +878,10 @@ def main() -> None:
         sys.exit(1)
     ns = parser.parse_args()
     cfg["verify_tls"] = not ns.no_check_certificate
+    
+    # Suppress SSL warnings when certificate verification is disabled
+    if ns.no_check_certificate:
+        warnings.filterwarnings("ignore", message="Unverified HTTPS request")
 
     if ns.quiet:
         if EARLY_PB:
@@ -818,8 +934,9 @@ def main() -> None:
                         if url and not url.startswith("#"):
                             urls.append(url)
             except Exception as e:
+                friendly_msg = format_friendly_error(e)
                 console.print(
-                    f"[red]⨯ Could not read input file {ns.url}: {e}[/]"
+                    f"[red]⨯ Could not read input file {ns.url}:[/] {friendly_msg}"
                 )
                 sys.exit(1)
     if ns.input:
@@ -830,7 +947,8 @@ def main() -> None:
                     if url and not url.startswith("#"):
                         urls.append(url)
         except Exception as e:
-            console.print(f"[red]⨯ Could not read input file {ns.input}: {e}[/]")
+            friendly_msg = format_friendly_error(e)
+            console.print(f"[red]⨯ Could not read input file {ns.input}:[/] {friendly_msg}")
             sys.exit(1)
 
     if not urls:
@@ -887,7 +1005,6 @@ if __name__ == "__main__":
         console.print("\n[yellow]Operation cancelled (main).[/]")
         sys.exit(130)
     except Exception as e:
-        console.print(
-            f"[bold red]Unhandled exception in main: {type(e).__name__}: {e}[/]"
-        )
+        friendly_msg = format_friendly_error(e)
+        console.print(f"[red]⨯ {friendly_msg}[/]")
         sys.exit(3)
