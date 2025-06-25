@@ -12,10 +12,12 @@ BuildArch:      noarch
 # Build-time dependencies
 BuildRequires:  python3-devel
 BuildRequires:  python3dist(requests) python3dist(rich)
+BuildRequires:  python3dist(libtorrent)
 BuildRequires:  (python3dist(tomli) if %{python3_pkgversion} < 3.11)
 
 # Runtime dependencies – same list
 Requires:       python3dist(requests) python3dist(rich)
+Requires:       python3dist(libtorrent)
 Requires:       (python3dist(tomli) if %{python3_pkgversion} < 3.11)
 
 %description
