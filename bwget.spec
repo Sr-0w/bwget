@@ -1,5 +1,5 @@
 Name:           bwget
-Version:        0.3.6
+Version:        0.4.0
 Release:        1%{?dist}
 Summary:        Tiny single-file Python replacement for wget
 
@@ -42,5 +42,5 @@ install -Dm0644 bwget.1 %{buildroot}%{_mandir}/man1/bwget.1
 %{_mandir}/man1/bwget.1*
 
 %changelog
-* Tue Jun 03 2025 Sr-0w <robin@snyders.xyz> - 0.3.6-1
+* Tue Jun 03 2025 Sr-0w <robin@snyders.xyz> - 0.4.0-1
 - First RPM/COPR release
